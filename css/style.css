@@ -1,0 +1,118 @@
+.card {
+  box-shadow: 1px 1px 6px rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+  padding: 40px;
+  margin: 40px;
+}
+
+.card .card-header {
+  text-align: center;
+}
+
+.card .card-body {
+
+}
+
+.row {
+  width: 100%;
+  border-top: 1px solid rgba(0, 0, 0, 0.15);
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+.error {
+  font-weight: bold;
+  color: red;
+  text-align: center;
+}
+
+.text-center {
+  text-align: center;
+}
+
+table {
+  width: 100%;
+}
+
+tr {
+  transition: all 150ms;
+}
+
+tr:hover {
+  color: #cb0a70;
+  cursor: default;
+}
+
+tr:first-child {
+  background-color: rgba(63, 79, 227, 0.8);
+  color: white;
+}
+
+tr:nth-child(2n) {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+tr:nth-child(2n):hover {
+  background-color: rgba(0, 0, 0, 0.10);
+}
+
+tr:nth-child(2n+3) {
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+tr:nth-child(2n+3):hover {
+  background-color: rgba(0, 0, 0, 0.19);
+}
+
+td, th {
+  text-align: center;
+  padding: 10px;
+}
+
+.open {
+  color: #0a9300;
+}
+
+.closed {
+  color: #d70000;
+}
+
+.link {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.reviewer {
+  font-weight: bold;
+  display: block;
+}
+
+.label {
+  padding: 7px;
+  border-radius: 3px;
+  margin: 4px;
+  box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.4);
+}
+
+.tab-container {
+  text-align: center;
+}
+
+.tab-container .tab-selector {
+  box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+  width: -moz-max-content;
+  width: -webkit-max-content;
+  width: -o-max-content;
+  width: -ms-max-content;
+  width: max-content;
+  display: inline-block;
+  font-size: 1.1em;
+  padding: 1em;
+  cursor: pointer;
+}
+
+.tab-container .tab-selector.selected-tab {
+  background-color: #2b2cc5;
+  color: white;
+  font-weight: bold;
+}

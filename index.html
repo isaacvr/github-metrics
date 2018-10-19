@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Metrics Generator</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+  <body ng-app="metricsGenerator" ng-controller="metricsController">
+
+    <div class="card">
+      <div class="card-header">
+        <h1 ng-bind="'Metrics Generator'"></h1>
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+          <button ng-click="generateMetrics()"> Get Info </button>
+        </div>
+        <div class="row tab-container">
+          <div class="tab-selector" ng-click="selectTab(0)" ng-class="{ 'selected-tab': selectedTab === 0 }">
+            <span>Tables</span>
+          </div>
+          <div class="tab-selector" ng-click="selectTab(1)" ng-class="{ 'selected-tab': selectedTab === 1 }">
+            <span>Graphics</span>
+          </div>
+        </div>
+        <div class="tab" ng-show="selectedTab === 0">
+          <div class="row" ng-show="users.length > 0">
+            <h2 class="card-header" ng-bind="'Users'"></h2>
+            <table>
+              <tr>
+                <th>User</th>
+                <th class="link" ng-click="selectField('commits')">Commits</th>
+                <th class="link" ng-click="selectField('pulls')">Pull Requests</th>
+                <th class="link" ng-click="selectField('issues')">Issues</th>
+              </tr>
+              <tr ng-repeat="user in users | orderBy:userField:userOrder">
+                <td ng-bind="user.name"></td>
+                <td ng-bind="user.commits"></td>
+                <td ng-bind="user.pulls"></td>
+                <td ng-bind="user.issues"></td>
+              </tr>
+            </table>
+          </div>
+          <div class="row" ng-show="commits.length > 0">
+            <h2 class="card-header" ng-bind="'Commits'"></h2>
+            <p class="error" ng-bind="'Error while trying to get commits'" ng-show="commitsError"></p>
+            <table ng-hide="commitsError">
+              <tr>
+                <th>User</th>
+                <th>Message</th>
+                <th>Created</th>
+                <th>Comments</th>
+              </tr>
+              <tr ng-repeat="commit in commits">
+                <td ng-bind="commit.commit.committer.name"></td>
+                <td ng-bind="commit.commit.message"></td>
+                <td ng-bind="commit.created_at"></td>
+                <td ng-bind="commit.commit.comment_count"></td>
+              </tr>
+            </table>
+          </div>
+          <div class="row" ng-show="pullRequests.length > 0">
+            <h2 class="card-header" ng-bind="'Pull Requests'"></h2>
+            <p class="error" ng-bind="'Error while trying to get pull requests'" ng-show="pullRequestError"></p>
+            <table ng-hide="pullRequestError">
+              <tr>
+                <th>State</th>
+                <th>User</th>
+                <th>Title</th>
+                <th>Created to Merged</th>
+                <th>Reviews</th>
+                <th>Reviewers</th>
+                <th>Labels</th>
+              </tr>
+              <tr ng-repeat="pr in pullRequests">
+                <td ng-bind="pr.state" class="{{pr.state}}"></td>
+                <td ng-bind="'@' + pr.head.user.login"></td>
+                <td ng-bind="pr.title"></td>
+                <td ng-bind="pr.timeToMerge"></td>
+                <td ng-bind="pr.reviews.length"></td>
+                <td>
+                  <span class="reviewer" ng-repeat="reviewer in pr.requested_reviewers" ng-bind="reviewer.login"></span>
+                </td>
+                <td>
+                  <span class="label" ng-repeat="label in pr.labels" ng-bind="label.name" ng-style="{ 'background-color': '#' + label.color, 'color': inverseColor(label.color) }"></span>
+                </td>
+              </tr>
+            </table>
+          </div>
+          <div class="row" ng-show="issues.length > 0">
+            <h2 class="card-header" ng-bind="'Issues'"></h2>
+            <p class="error" ng-bind="'Error while trying to get issues'" ng-show="issuesError"></p>
+            <table ng-hide="issuesError">
+              <tr>
+                <th>State</th>
+                <th>#</th>
+                <th>User</th>
+                <th>Title</th>
+                <th>Created At</th>
+                <th>Closed At</th>
+                <th>Comments</th>
+              </tr>
+              <tr ng-repeat="issue in issues">
+                <td ng-bind="issue.state" class="{{issue.state}}"></td>
+                <td ng-bind="'#' + issue.number"></td>
+                <td ng-bind="'@' + issue.user.login"></td>
+                <td ng-bind="issue.title"></td>
+                <td ng-bind="issue.created_at"></td>
+                <td ng-bind="issue.closed_at"></td>
+                <td ng-bind="issue.comments"></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="tab" ng-show="selectedTab === 1">
+          <div class="row commits-per-hour">
+            <h2 ng-bind="'Commits per hour'" class="text-center"></h2>
+            <select>
+              <option ng-repeat="(idx, day) in DAYS" value="{{idx}}" ng-click="selectPunchCardDay(idx)" ng-bind="day"></option>
+            </select>
+            <canvas id="commitsPerHour"></canvas>
+          </div>
+          <div class="row contribs-per-week">
+            <h2 ng-bind="'Contributions per week'" class="text-center"></h2>
+            <select>
+              <option ng-repeat="val in contribKeys | orderBy:val:true" value="{{val}}" ng-click="selectWeek(val)" ng-bind="getContribDate(val)"></option>
+            </select>
+            <canvas id="contribsPerWeek"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </body>
+  <script type="text/javascript" src="js/Chart.min.js"></script>
+  <script type="text/javascript" src="js/moment-with-locales.min.js"></script>
+  <script type="text/javascript" src="js/angularjs-1.4.8.js"></script>
+  <script type="text/javascript" src="js/main.js"></script>
+</html>
