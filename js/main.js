@@ -9,46 +9,261 @@
 
       Chart.defaults.global.defaultFontSize = 18;
 
-      $scope.owner = '';
-      $scope.repo = '';
-
-      $scope.ISSUES_TMPL = 'http://api.github.com/repos/:owner/:repo/issues';
-      $scope.PULL_REQ_TMPL = 'http://api.github.com/repos/:owner/:repo/pulls';
       $scope.DATE_FORMAT = 'DD/MM/YYYY';
       $scope.DAYS = moment.weekdays();
       $scope.DEBUG_MODE = true;
-
-      $scope.issuesError = false;
-      $scope.pullRequestError = false;
-      $scope.commitsError = false;
-      $scope.userOrder = false;
-
-      $scope.references = {};
-      $scope.contribs = {};
-      $scope.selectedWeek = {};
-      $scope.users = [];
-      $scope.commits = [];
-      $scope.issues = [];
-      $scope.pullRequests = [];
-      $scope.contribKeys = [];
-      $scope.punchCard = [];
-
-      $scope.selectedTab = 0;
-      $scope.totalTabs = 2;
+      $scope.PULLS_PER_PAGE = 30;
+      $scope.ISSUES_PER_PAGE = 30;
+      $scope.COMMITS_PER_PAGE = 30;
+      $scope.PR_STATES = [ 'all', 'open', 'closed' ];
+      $scope.IS_STATES = [ 'all', 'open', 'closed' ];
+      $scope.selectedMonth = moment('2000-01-00T00:00:00Z').format('MMMM');
 
       $scope.doc = document;
 
       $scope.canvas = {
         commitsPerHour: $scope.doc.getElementById('commitsPerHour').getContext('2d'),
         contribsPerWeek: $scope.doc.getElementById('contribsPerWeek').getContext('2d'),
+        commitsPerMonth: $scope.doc.getElementById('contribsPerMonth').getContext('2d'),
       };
 
       $scope.charts = {};
+
+      $scope.createOrEmpty = function createOrEmpty(id) {
+
+        if ( Array.isArray( $scope[id] ) === true ) {
+          $scope[id].length = 0;
+        } else {
+          $scope[id] = [];
+        }
+
+      };
+
+      $scope.init = function init() {
+
+        $scope.issuesError = false;
+        $scope.pullRequestError = false;
+        $scope.commitsError = false;
+        $scope.userOrder = false;
+
+        $scope.pullState = 'open';
+        $scope.issueState = 'open';
+        $scope.selectedDay = 0;
+
+        $scope.pagination = {
+          pr: 1,
+          is: 1,
+          cm: 1
+        };
+
+        $scope.pullRequestCant = $scope.PULLS_PER_PAGE;
+        $scope.pullRequestOffset = 0;
+
+        $scope.issueCant = $scope.ISSUES_PER_PAGE;
+        $scope.issueOffset = 0;
+
+        $scope.commitCant = $scope.COMMITS_PER_PAGE;
+        $scope.commitOffset = 0;
+
+        $scope.references = {};
+        $scope.contribs = {};
+        $scope.selectedWeek = {};
+        $scope.commitsPerMonth = {};
+
+        $scope.createOrEmpty('users');
+        $scope.createOrEmpty('commits');
+        $scope.createOrEmpty('issues');
+        $scope.createOrEmpty('pullRequests');
+        $scope.createOrEmpty('filteredPullRequests');
+        $scope.createOrEmpty('filteredCommits');
+        $scope.createOrEmpty('filteredIssues');
+        $scope.createOrEmpty('contribKeys');
+        $scope.createOrEmpty('punchCard');
+        $scope.createOrEmpty('_tempPr');
+        $scope.createOrEmpty('_tempCm');
+        $scope.createOrEmpty('_tempIs');
+
+        $scope.stats = {
+          pr: {
+            open: 0,
+            closed: 0,
+            merged: 0,
+            all: 0
+          },
+          is: {
+            open: 0,
+            closed: 0,
+            all: 0
+          },
+          cm: 0
+        };
+
+        $scope.selectedTab = 0;
+        $scope.totalTabs = 2;
+
+      };
+
+      $scope.init();
 
       var DEBUG = function DEBUG() {
 
         if ( $scope.DEBUG_MODE === true ) {
           console.log.apply(null, arguments);
+        }
+
+      };
+
+      $scope.scrollTop = function scrollTop() {
+
+        var ini = window.scrollY;
+        var i = 0;
+
+        var itv = setInterval(function() {
+
+          window.scroll(0, ini - ini * Math.sqrt(i));
+
+          if (i >= 1) {
+            clearInterval(itv);
+          }
+
+          i += 0.01;
+
+        }, 5);
+
+      };
+
+      $scope.setPage = function setPage(name, num) {
+        $scope.pagination[name] = num;
+        if ( name === 'pr' ) {
+          $scope.updatePullRequestFilter(true);
+        } else if ( name === 'is' ) {
+          $scope.updateIssueFilter(true);
+        } else if ( name === 'cm' ) {
+          $scope.updateCommitFilter(true);
+        }
+      };
+
+      $scope.updateCommitFilter = function updateCommitFilter(change) {
+
+        change = !change;
+
+        if ( change === true ) {
+          $scope.setPage('cm', 1);
+          return;
+        }
+
+        var tot = $scope.stats.cm;
+        var ppp = $scope.COMMITS_PER_PAGE;
+        var cant = Math.floor( ( tot - 1 ) / ppp ) + 1;
+
+        $scope._tempCm = new Array( cant );
+
+        $scope.commitCant = ppp;
+        var page = $scope.pagination.cm;
+        $scope.commitOffset = ( page - 1 ) * ppp;
+
+        $scope.filteredCommits = $scope.commits.filter($scope.commitFilter);
+
+      };
+
+      $scope.updateIssueFilter = function updateIssueFilter(change) {
+
+        change = !change;
+
+        if ( change === true ) {
+          $scope.setPage('is', 1);
+          return;
+        }
+
+        var tot = $scope.stats.is[ $scope.issueState ];
+        var ppp = $scope.ISSUES_PER_PAGE;
+        var cant = Math.floor( ( tot - 1 ) / ppp ) + 1;
+
+        $scope._tempIs = new Array( cant );
+
+        $scope.issueCant = ppp;
+        var page = $scope.pagination.is;
+        $scope.issueOffset = ( page - 1 ) * ppp;
+
+        $scope.filteredIssues = $scope.issues.filter($scope.issueFilter);
+
+      };
+
+      $scope.updatePullRequestFilter = function updatePullRequestFilter(change) {
+
+        change = !change;
+
+        if ( change === true ) {
+          $scope.setPage('pr', 1);
+          return;
+        }
+
+        var tot = $scope.stats.pr[ $scope.pullState ];
+        var ppp = $scope.PULLS_PER_PAGE;
+        var cant = Math.floor( ( tot - 1 ) / ppp ) + 1;
+
+        $scope._tempPr = new Array( cant );
+
+        $scope.pullRequestCant = ppp;
+        var page = $scope.pagination.pr;
+        $scope.pullRequestOffset = ( page - 1) * ppp;
+
+        $scope.filteredPullRequests = $scope.pullRequests.filter($scope.pullRequestFilter);
+
+      };
+
+      $scope.commitFilter = function commitFilter(cm, idx, arr) {
+
+        if ( $scope.commitCant === 0 ) {
+          return false;
+        }
+
+        if ( $scope.commitOffset === 0 ) {
+          $scope.commitCant -= 1;
+          return true;
+        } else {
+          $scope.commitOffset -= 1;
+          return false;
+        }
+
+      };
+
+      $scope.issueFilter = function issueFilter(is, idx, arr) {
+
+        if ( $scope.issueCant === 0 ) {
+          return false;
+        }
+
+        if ( $scope.issueState === 'all' || $scope.issueState === is.state ) {
+          if ( $scope.issueOffset === 0 ) {
+            $scope.issueCant -= 1;
+            return true;
+          } else {
+            $scope.issueOffset -= 1;
+            return false;
+          }
+        } else {
+          return false;
+        }
+
+      };
+
+      $scope.pullRequestFilter = function pullRequestFilter(pr, idx, arr) {
+
+        if ( $scope.pullRequestCant === 0 ) {
+          return false;
+        }
+
+        if ( $scope.pullState === 'all' || $scope.pullState === pr.state ) {
+          if ( $scope.pullRequestOffset === 0 ) {
+            $scope.pullRequestCant -= 1;
+            return true;
+          } else {
+            $scope.pullRequestOffset -= 1;
+            return false;
+          }
+        } else {
+          return false;
         }
 
       };
@@ -235,30 +450,98 @@
 
       };
 
+      $scope.selectCommitMonth = function selectCommitMonth(mnt) {
+
+        if ( $scope.commitsPerMonth.hasOwnProperty(mnt) === true ) {
+
+          var cntb = $scope.commitsPerMonth[mnt];
+          var len = cntb.length;
+          var i;
+
+          $scope.selectedMonth = mnt;
+
+          var name = mnt;
+
+          var labels = [];
+          var data = [];
+
+          var colors = [ 'rgb(38, 128, 246)' ];
+
+          for (i = 0; i < len; i += 1) {
+            labels.push('@' + cntb[i].name);
+            data.push(cntb[i].commits);
+          }
+
+          $scope.charts.commitsPerMonth.data = {
+            labels : labels,
+            datasets : [
+              {
+                label : "Commits",
+                backgroundColor : colors[0],
+                borderColor : colors[0],
+                data : data,
+                fill : false
+              }
+            ]
+          };
+
+          $scope.charts.commitsPerMonth.update();
+
+        }
+
+      };
+
       $scope.addCommit = function addCommit(commit) {
 
         var user = commit.commit.author;
         var authorInfo = commit.author;
 
         var len = $scope.users.length;
-        var id;
+        var id, i;
+        var mnt = commit.created_at_moment.format('MMMM');
 
         if ( authorInfo != null ) {
           id = authorInfo.login;
+          user = authorInfo.login;
         } else {
           id = user.email;
+          user = user.name;
         }
 
-        for (var i = 0; i < len; i += 1) {
+        if ( $scope.commitsPerMonth.hasOwnProperty(mnt) === false ) {
+          $scope.commitsPerMonth[mnt] = [];
+        }
+
+        var len1 = $scope.commitsPerMonth[mnt].length;
+        var fnd = false;
+
+        for (i = 0; i < len1; i += 1) {
+          if ( $scope.commitsPerMonth[mnt][i].id === id ) {
+            $scope.commitsPerMonth[mnt][i].name = user;
+            $scope.commitsPerMonth[mnt][i].commits += 1;
+            fnd = true;
+            break;
+          }
+        }
+
+        if ( fnd === false ) {
+          $scope.commitsPerMonth[mnt].push({
+            name: user,
+            id: id,
+            commits: 1
+          });
+        }
+
+        for (i = 0; i < len; i += 1) {
           if ( $scope.users[i].id === id ) {
-            $scope.users[i].name = user.name;
+            $scope.users[i].name = user;
             $scope.users[i].commits += 1;
             return;
           }
         }
 
         $scope.users.push({
-          name: user.name,
+          name: user,
           id: id,
           commits: 1,
           pulls: 0,
@@ -321,6 +604,8 @@
         for (i = 0; i < len; i += 1) {
 
           $scope.addReferences(data[i].title);
+          $scope.stats.is.all += 1;
+          $scope.stats.is[ data[i].state ] += 1;
 
           for (var j in model) {
             if ( model.hasOwnProperty(j) === true ) {
@@ -335,7 +620,7 @@
           $scope.addIssue(data[i].user.login);
         }
 
-        DEBUG('USERS parseIssues: ', $scope.users);
+        //DEBUG('USERS parseIssues: ', $scope.users);
 
         return data;
 
@@ -346,15 +631,17 @@
         var i, len = data.length;
 
         for (i = 0; i < len; i += 1) {
-          $scope.addCommit(data[i]);
+          $scope.stats.cm += 1;
+          $scope.stats.pr[ data[i].state ] += 1;
           data[i].created_at_moment = moment(data[i].commit.author.date);
           data[i].created_at = data[i].created_at_moment.format($scope.DATE_FORMAT);
           data[i].message = data[i].message || '<no-message>';
+          $scope.addCommit(data[i]);
           $scope.addReferences(data[i].message);
           //data[i].message = data[i].message.replace(/\r/g, '').replace(/\n/g, '<br>');
         }//*/
 
-        DEBUG('USERS parseCommits: ', $scope.users);
+        //DEBUG('USERS parseCommits: ', $scope.users);
 
         return data;
 
@@ -373,16 +660,18 @@
         for (i = 0; i < len; i += 1) {
 
           $scope.addReferences(data[i].title);
+          $scope.stats.pr.all += 1;
+          $scope.stats.pr[ data[i].state ] += 1;
 
           for (var j in model) {
             if ( model.hasOwnProperty(j) === true ) {
-              DEBUG( j, data[i][j] );
+              //DEBUG( j, data[i][j] );
 
               data[i][j + '_moment'] = model[j]( data[i][j] );
 
               if ( data[i][j] ) {
                 data[i][j] = model[j]( data[i][j] ).format($scope.DATE_FORMAT);
-                DEBUG(j, data[i][j]);
+                //DEBUG(j, data[i][j]);
               } else {
                 //DEBUG('invalid date:', data[i][j]);
                 data[i][j] = '--';
@@ -451,7 +740,7 @@
 
         $scope.selectWeek( $scope.contribKeys[len] );
 
-        DEBUG($scope.contribs);
+        //DEBUG($scope.contribs);
 
       };
 
@@ -459,9 +748,9 @@
 
         var colors = [ 'rgb(147, 81, 255)' ];
 
-        d = ~~d;
+        $scope.selectedDay = d = ~~d;
 
-        DEBUG('Selected Day: ', d);
+        //DEBUG('Selected Day: ', d);
 
         if ( d >= 0 && d < 7 ) {
 
@@ -528,7 +817,7 @@
           .get(url)
           .success(function(data) {
 
-            DEBUG('Punch Card: ', data);
+            //DEBUG('Punch Card: ', data);
             $scope.parsePunchCard(data);
 
           })
@@ -572,7 +861,7 @@
 
         }
 
-        DEBUG('Diff: ', val, times[offset]);
+        //DEBUG('Diff: ', val, times[offset]);
 
         var resp = times[offset];
 
@@ -584,9 +873,17 @@
 
       };
 
-      $scope.getIssues = function getIssues() {
+      $scope.getIssues = function getIssues(page) {
 
-        var url = '/json/issues.json';
+        page = page || '';
+        var pageNumber = ~~page;
+
+        if ( pageNumber === 0 ) {
+          pageNumber = 1;
+          $scope.pullRequests = [];
+        }
+
+        var url = '/json/issues' + page + '.json';
 
         $scope.issuesError = false;
 
@@ -594,19 +891,27 @@
           .get(url)
           .success(function(data) {
 
-            DEBUG(url);
-            DEBUG(data);
+            //DEBUG(url);
+            //DEBUG(data);
 
-            $scope.issues = $scope.parseIssues(data);
+            $scope.issues = $scope.issues.concat( $scope.parseIssues(data) );
 
-            DEBUG('Parsed issues: ', $scope.issues);
+            //DEBUG('Parsed issues: ', $scope.issues);
+
+            pageNumber += 1;
+
+            $scope.getIssues(pageNumber);
 
           })
           .catch(function(err) {
 
             DEBUG('ISSUES ERROR: ', err);
 
-            $scope.issuesError = true;
+            if ( pageNumber === 1 ) {
+              $scope.issuesError = true;
+            }
+
+            $scope.setPage('is', 1);
 
           });
 
@@ -618,7 +923,7 @@
           .get('/json/review-' + pr.number +  '.json')
           .success(function(rv) {
 
-            DEBUG('Review #' + pr.number, rv);
+            //DEBUG('Review #' + pr.number, rv);
             pr.reviews = rv;
 
           })
@@ -628,9 +933,17 @@
 
       };
 
-      $scope.getPullRequests = function getPullRequests() {
+      $scope.getPullRequests = function getPullRequests(page) {
 
-        var url = '/json/pr.json';
+        page = page || '';
+        var pageNumber = ~~page;
+
+        if ( pageNumber === 0 ) {
+          pageNumber = 1;
+          $scope.pullRequests = [];
+        }
+
+        var url = '/json/pr' + page + '.json';
 
         $scope.pullRequestError = false;
 
@@ -638,34 +951,48 @@
           .get(url)
           .success(function(data) {
 
-            DEBUG(url);
-            DEBUG(data);
+            //DEBUG(url);
+            //DEBUG(data);
 
-            $scope.pullRequests = $scope.parsePullRequests(data);
+            $scope.pullRequests = $scope.pullRequests.concat($scope.parsePullRequests(data));
 
-            var len = $scope.pullRequests.length;
+            var len = data.length;
 
             for (var i = 0; i < len; i += 1) {
-              $scope.pullRequests[i].reviews = [];
-              $scope.getReviews( $scope.pullRequests[i] );
+              data[i].reviews = [];
+              //$scope.getReviews( data[i] );
             }
 
-            DEBUG('Parsed pr: ', $scope.pullRequests);
+            pageNumber += 1;
+
+            $scope.getPullRequests(pageNumber);
 
           })
           .catch(function(err) {
 
             DEBUG('PR ERROR: ', err);
 
-            $scope.pullRequestError = true;
+            if ( pageNumber === 1 ) {
+              $scope.pullRequestError = true;
+            }
+
+            $scope.setPage('pr', 1);
 
           });
 
       };
 
-      $scope.getCommits = function getCommits() {
+      $scope.getCommits = function getCommits(page) {
 
-        var url = '/json/commits.json';
+        page = page || '';
+        var pageNumber = ~~page;
+
+        if ( pageNumber === 0 ) {
+          pageNumber = 1;
+          $scope.pullRequests = [];
+        }
+
+        var url = '/json/commits' + page + '.json';
 
         $scope.commitsError = false;
 
@@ -673,18 +1000,25 @@
           .get(url)
           .success(function(data) {
 
-            DEBUG(url);
-            DEBUG(data);
+            //DEBUG(url);
+            //DEBUG(data);
 
-            $scope.commits = $scope.parseCommits(data);
-            //$scope.getCommitsPerHour();
+            $scope.commits = $scope.commits.concat( $scope.parseCommits(data) );
+
+            pageNumber += 1;
+
+            $scope.getCommits(pageNumber);
 
           })
           .catch(function(err) {
 
             DEBUG('COMMIT ERROR: ', err);
 
-            $scope.commitsError = true;
+            if ( pageNumber === 1 ) {
+              $scope.commitsError = true;
+            }
+
+            $scope.setPage('cm', 1);
 
           });
 
@@ -692,14 +1026,9 @@
 
       $scope.generateMetrics = function generateMetrics() {
 
-        DEBUG($scope.owner, $scope.repo);
+        //DEBUG($scope.owner, $scope.repo);
 
-        $scope.users.length = 0;
-        $scope.commits.length = 0;
-        $scope.issues.length = 0;
-        $scope.pullRequests.length = 0;
-        $scope.references = {};
-        $scope.contribs = {};
+        $scope.init();
 
         setTimeout($scope.getIssues, 0);
         setTimeout($scope.getPullRequests, 0);

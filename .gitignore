@@ -1,4 +1,4 @@
 /node_modules
 /docs
-/json
-/json1
+/json*
+auth.js

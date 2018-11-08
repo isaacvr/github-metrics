@@ -4,8 +4,28 @@
 Install all the dependencies using npm:
 
 ```js
-  npm install request chalk commander
+  npm install request chalk commander querystring glob
 ```
+
+Then create in the project's folder, a file called `auth.js` with the content:
+
+```javascript
+
+exports.client_id = '<my-client-id>';
+exports.client_secret = '<my-client-secret>';
+
+```
+
+If you don't have any of these things, use the next configuration:
+
+```javascript
+
+exports.client_id = -1;
+exports.client_secret = -1;
+
+```
+
+If the configuration is different that before, there will be an unexpected behaviour.
 
 ## Usage
 

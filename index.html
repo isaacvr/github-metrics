@@ -7,6 +7,8 @@
 </head>
   <body ng-app="metricsGenerator" ng-controller="metricsController">
 
+    <div class="scroll-top" ng-click="scrollTop()"></div>
+
     <div class="card">
       <div class="card-header">
         <h1 ng-bind="'Metrics Generator'"></h1>
@@ -44,6 +46,9 @@
           <div class="row" ng-show="commits.length > 0">
             <h2 class="card-header" ng-bind="'Commits'"></h2>
             <p class="error" ng-bind="'Error while trying to get commits'" ng-show="commitsError"></p>
+            <ul class="pagination-container">
+              <li class="pagination-number" ng-class="{ selected: pos + 1 === pagination.cm }" ng-repeat="(pos, value) in _tempCm track by $index" ng-click="setPage('cm', pos+1)" ng-bind="pos+1"></li>
+            </ul>
             <table ng-hide="commitsError">
               <tr>
                 <th>User</th>
@@ -51,8 +56,8 @@
                 <th>Created</th>
                 <th>Comments</th>
               </tr>
-              <tr ng-repeat="commit in commits">
-                <td ng-bind="commit.commit.committer.name"></td>
+              <tr ng-repeat="commit in filteredCommits">
+                <td ng-bind="'@' + commit.commit.author.name"></td>
                 <td ng-bind="commit.commit.message"></td>
                 <td ng-bind="commit.created_at"></td>
                 <td ng-bind="commit.commit.comment_count"></td>
@@ -62,9 +67,17 @@
           <div class="row" ng-show="pullRequests.length > 0">
             <h2 class="card-header" ng-bind="'Pull Requests'"></h2>
             <p class="error" ng-bind="'Error while trying to get pull requests'" ng-show="pullRequestError"></p>
+            <select ng-model="pullState" ng-change="updatePullRequestFilter()">
+              <option ng-repeat="state in PR_STATES" ng-click="pullState = state" ng-bind="state" value="{{state}}"></option>
+            </select>
+            <ul class="pagination-container">
+              <li class="pagination-number" ng-class="{ selected: pos + 1 === pagination.pr }" ng-repeat="(pos, value) in _tempPr track by $index" ng-click="setPage('pr', pos+1)" ng-bind="pos+1"></li>
+              <!--li ng-click="setPage('pr', 2)">2</li-->
+            </ul>
             <table ng-hide="pullRequestError">
               <tr>
                 <th>State</th>
+                <th>#</th>
                 <th>User</th>
                 <th>Title</th>
                 <th>Created to Merged</th>
@@ -72,8 +85,9 @@
                 <th>Reviewers</th>
                 <th>Labels</th>
               </tr>
-              <tr ng-repeat="pr in pullRequests">
+              <tr ng-repeat="pr in filteredPullRequests">
                 <td ng-bind="pr.state" class="{{pr.state}}"></td>
+                <td ng-bind="pr.number"></td>
                 <td ng-bind="'@' + pr.head.user.login"></td>
                 <td ng-bind="pr.title"></td>
                 <td ng-bind="pr.timeToMerge"></td>
@@ -90,6 +104,13 @@
           <div class="row" ng-show="issues.length > 0">
             <h2 class="card-header" ng-bind="'Issues'"></h2>
             <p class="error" ng-bind="'Error while trying to get issues'" ng-show="issuesError"></p>
+            <select ng-model="issueState" ng-change="updateIssueFilter()">
+              <option ng-repeat="state in IS_STATES" ng-click="issueState = state" ng-bind="state" value="{{state}}"></option>
+            </select>
+            <ul class="pagination-container">
+              <li class="pagination-number" ng-class="{ selected: pos + 1 === pagination.is }" ng-repeat="(pos, value) in _tempIs track by $index" ng-click="setPage('is', pos+1)" ng-bind="pos+1"></li>
+              <!--li ng-click="setPage('pr', 2)">2</li-->
+            </ul>
             <table ng-hide="issuesError">
               <tr>
                 <th>State</th>
@@ -100,7 +121,7 @@
                 <th>Closed At</th>
                 <th>Comments</th>
               </tr>
-              <tr ng-repeat="issue in issues">
+              <tr ng-repeat="issue in filteredIssues">
                 <td ng-bind="issue.state" class="{{issue.state}}"></td>
                 <td ng-bind="'#' + issue.number"></td>
                 <td ng-bind="'@' + issue.user.login"></td>
@@ -115,9 +136,9 @@
         <div class="tab" ng-show="selectedTab === 1">
           <div class="row commits-per-hour">
             <h2 ng-bind="'Commits per hour'" class="text-center"></h2>
-            <select>
-              <option ng-repeat="(idx, day) in DAYS" value="{{idx}}" ng-click="selectPunchCardDay(idx)" ng-bind="day"></option>
-            </select>
+            <ul class="tab-container">
+              <li class="tab-selector" ng-class="{ 'selected-tab': idx === selectedDay }" ng-repeat="(idx, day) in DAYS" value="{{idx}}" ng-click="selectPunchCardDay(idx)" ng-bind="day"></li>
+            </ul>
             <canvas id="commitsPerHour"></canvas>
           </div>
           <div class="row contribs-per-week">
@@ -126,6 +147,13 @@
               <option ng-repeat="val in contribKeys | orderBy:val:true" value="{{val}}" ng-click="selectWeek(val)" ng-bind="getContribDate(val)"></option>
             </select>
             <canvas id="contribsPerWeek"></canvas>
+          </div>
+          <div class="row contribs-per-month">
+            <h2 ng-bind="'Contributions per month'" class="text-center"></h2>
+            <select ng-model="selectedMonth">
+              <option ng-repeat="(month, val) in commitsPerMonth" value="{{month}}" ng-bind="month" ng-click="selectCommitMonth(month)"></option>
+            </select>
+            <canvas id="contribsPerMonth"></canvas>
           </div>
         </div>
       </div>
