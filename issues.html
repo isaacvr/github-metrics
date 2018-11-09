@@ -55,9 +55,7 @@
             <select ng-model="issueState" ng-change="updateIssuesFilter()">
               <option ng-repeat="state in ISSUE_STATES" ng-click="issueState = state" ng-bind="state" value="{{state}}"></option>
             </select>
-            <ul class="pagination-container">
-              <li class="pagination-number" ng-class="{ selected: pos + 1 === pagination }" ng-repeat="(pos, value) in _tempPr track by $index" ng-click="setPage(pos+1)" ng-bind="pos+1"></li>
-            </ul>
+            <pagination pagination="pagination.is" type="is" paginator="_tempIs"></pagination>
             <table ng-hide="issuesError">
               <tr>
                 <th>State</th>
@@ -257,6 +255,7 @@
   </body>
   <script type="text/javascript" src="js/moment-with-locales.min.js"></script>
   <script type="text/javascript" src="js/angularjs-1.4.8.js"></script>
+  <script type="text/javascript" src="js/ui.js"></script>
   <script type="text/javascript" src="js/issues.js"></script>
 
 </html>

@@ -114,6 +114,15 @@
       };
 
       $scope.setPage = function setPage(num) {
+
+        var tot = $scope.stats[$scope.pullState];
+        var ppp = $scope.PULLS_PER_PAGE;
+        var cant = Math.floor((tot - 1) / ppp) + 1;
+
+        if ( num < 1 || num > cant ) {
+          return;
+        }
+
         $scope.pagination = num;
         $scope.updatePullRequestFilter(true);
       };

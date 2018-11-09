@@ -1,6 +1,6 @@
 (function() {
 
-  var myApp = angular.module('metricsGenerator', []);
+  var myApp = angular.module('metricsGenerator', ['ui']);
 
   myApp.controller('metricsController', [
     '$scope',
@@ -133,14 +133,47 @@
       };
 
       $scope.setPage = function setPage(name, num) {
-        $scope.pagination[name] = num;
+
+        var tot, ppp, cant;
+
         if ( name === 'pr' ) {
+          tot = $scope.stats.pr[ $scope.pullState ];
+          ppp = $scope.PULLS_PER_PAGE;
+          cant = Math.floor( ( tot - 1 ) / ppp ) + 1;
+
+          if ( num < 1 || num > cant ) {
+            return;
+          }
+
+          $scope.pagination[name] = num;
           $scope.updatePullRequestFilter(true);
+
         } else if ( name === 'is' ) {
+          tot = $scope.stats.is[ $scope.issueState ];
+          ppp = $scope.ISSUES_PER_PAGE;
+          cant = Math.floor( ( tot - 1 ) / ppp ) + 1;
+
+          if ( num < 1 || num > cant ) {
+            return;
+          }
+
+          $scope.pagination[name] = num;
           $scope.updateIssueFilter(true);
+
         } else if ( name === 'cm' ) {
+          tot = $scope.stats.cm;
+          ppp = $scope.COMMITS_PER_PAGE;
+          cant = Math.floor( ( tot - 1 ) / ppp ) + 1;
+
+          if ( num < 1 || num > cant ) {
+            return;
+          }
+
+          $scope.pagination[name] = num;
           $scope.updateCommitFilter(true);
+
         }
+
       };
 
       $scope.updateCommitFilter = function updateCommitFilter(change) {

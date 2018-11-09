@@ -46,9 +46,7 @@
           <div class="row" ng-show="commits.length > 0">
             <h2 class="card-header" ng-bind="'Commits'"></h2>
             <p class="error" ng-bind="'Error while trying to get commits'" ng-show="commitsError"></p>
-            <ul class="pagination-container">
-              <li class="pagination-number" ng-class="{ selected: pos + 1 === pagination.cm }" ng-repeat="(pos, value) in _tempCm track by $index" ng-click="setPage('cm', pos+1)" ng-bind="pos+1"></li>
-            </ul>
+            <pagination pagination="pagination.cm" type="cm" paginator="_tempCm"></pagination>
             <table ng-hide="commitsError">
               <tr>
                 <th>User</th>
@@ -70,10 +68,7 @@
             <select ng-model="pullState" ng-change="updatePullRequestFilter()">
               <option ng-repeat="state in PR_STATES" ng-click="pullState = state" ng-bind="state" value="{{state}}"></option>
             </select>
-            <ul class="pagination-container">
-              <li class="pagination-number" ng-class="{ selected: pos + 1 === pagination.pr }" ng-repeat="(pos, value) in _tempPr track by $index" ng-click="setPage('pr', pos+1)" ng-bind="pos+1"></li>
-              <!--li ng-click="setPage('pr', 2)">2</li-->
-            </ul>
+            <pagination pagination="pagination.pr" type="pr" paginator="_tempPr"></pagination>
             <table ng-hide="pullRequestError">
               <tr>
                 <th>State</th>
@@ -107,10 +102,7 @@
             <select ng-model="issueState" ng-change="updateIssueFilter()">
               <option ng-repeat="state in IS_STATES" ng-click="issueState = state" ng-bind="state" value="{{state}}"></option>
             </select>
-            <ul class="pagination-container">
-              <li class="pagination-number" ng-class="{ selected: pos + 1 === pagination.is }" ng-repeat="(pos, value) in _tempIs track by $index" ng-click="setPage('is', pos+1)" ng-bind="pos+1"></li>
-              <!--li ng-click="setPage('pr', 2)">2</li-->
-            </ul>
+            <pagination pagination="pagination.is" type="is" paginator="_tempIs"></pagination>
             <table ng-hide="issuesError">
               <tr>
                 <th>State</th>
@@ -163,5 +155,6 @@
   <script type="text/javascript" src="js/Chart.min.js"></script>
   <script type="text/javascript" src="js/moment-with-locales.min.js"></script>
   <script type="text/javascript" src="js/angularjs-1.4.8.js"></script>
+  <script type="text/javascript" src="js/ui.js"></script>
   <script type="text/javascript" src="js/main.js"></script>
 </html>

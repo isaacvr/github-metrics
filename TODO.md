@@ -1,6 +1,5 @@
 # TODO + data
-  * Improve pagination options
-  * Simplify even more all the data
+  * Create bundle files
   * Generate files with the general statistics in order to decrease the computational work in the browser
 
 ## Instructions...

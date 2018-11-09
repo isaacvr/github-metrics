@@ -1,6 +1,6 @@
 (function() {
 
-  var myApp = angular.module('metricsGenerator', []);
+  var myApp = angular.module('metricsGenerator', ['ui']);
 
   myApp.controller('issuesController', [
     '$scope',
@@ -38,7 +38,9 @@
 
         $scope.issueState = 'open';
 
-        $scope.pagination = 1;
+        $scope.pagination = {
+          is: 1
+        };
 
         $scope.issuesCant = $scope.ISSUES_PER_PAGE;
         $scope.issuesOffset = 0;
@@ -76,7 +78,7 @@
 
         $scope.timeRange = 'all';
 
-        $scope._tempPr = [];
+        $scope._tempIs = [];
 
       };
 
@@ -113,8 +115,17 @@
 
       };
 
-      $scope.setPage = function setPage(num) {
-        $scope.pagination = num;
+      $scope.setPage = function setPage(name, num) {
+
+        var tot = $scope.stats[$scope.issueState];
+        var ppp = $scope.ISSUES_PER_PAGE;
+        var cant = Math.floor((tot - 1) / ppp) + 1;
+
+        if ( num < 1 || num > cant ) {
+          return;
+        }
+
+        $scope.pagination[name] = num;
         $scope.updateIssuesFilter(true);
       };
 
@@ -133,7 +144,7 @@
         change = !change;
 
         if ( change === true ) {
-          $scope.setPage(1);
+          $scope.setPage('is', 1);
           return;
         }
 
@@ -141,10 +152,10 @@
         var ppp = $scope.ISSUES_PER_PAGE;
         var cant = Math.floor((tot - 1) / ppp) + 1;
 
-        $scope._tempPr = new Array(cant);
+        $scope._tempIs = new Array(cant);
 
         $scope.issuesCant = ppp;
-        var page = $scope.pagination;
+        var page = $scope.pagination.is;
         $scope.issuesOffset = (page - 1) * ppp;
 
         $scope.filteredIssues = $scope.issues.filter($scope.issuesFilter);
@@ -533,7 +544,7 @@
             $scope.issuesError = true;
           } else {
             $scope.getEvents();
-            $scope.setPage(1);
+            $scope.setPage('is', 1);
             DEBUG('STATS: ', $scope.stats);
             console.timeEnd('loadIssues');
           }

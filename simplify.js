@@ -7,6 +7,8 @@
 var glob = require('glob');
 var fs = require('fs');
 
+var TIMEOUT = 50;
+
 function getFileName(dir) {
 
   var name = dir.split('/').pop();
@@ -18,6 +20,10 @@ function getFileName(dir) {
 function __simpl(obj, fields) {
 
   var temp = {};
+
+  if ( !obj ) {
+    return temp;
+  }
 
   for (var j = 0, max1 = fields.length; j < max1; j += 1) {
     if ( typeof fields[j] === 'string' ) {
@@ -143,7 +149,19 @@ function simplifyIssues(file) {
 function simplifyCommits(file) {
 
   var fields = [
-    'commit'
+    {
+      commit: [
+        'author',
+        'committer',
+        'message',
+        {
+          tree: [
+            'sha'
+          ]
+        },
+        'comment_count'
+      ]
+    }
   ];
 
   var obj;
@@ -208,28 +226,103 @@ function simplifyReviews(file) {
 
 }
 
-glob(__dirname + '/json/*.json', function(err, data) {
+function simplifyEvents(file) {
 
-  //console.log(data);
-
-  for (var i = 0, max = data.length; i < max; i += 1) {
-
-    var name = getFileName(data[i]);
-
-    if ( /^pr/.test(name) === true ) {
-      simplifyPullRequest(data[i]);
-    } else if ( /^issues/.test(name) === true ) {
-      simplifyIssues(data[i]);
-    } else if ( /^commits/.test(name) === true ) {
-      simplifyCommits(data[i]);
-    } else if ( /^review/.test(name) === true ) {
-      simplifyReviews(data[i]);
+  var fields = [
+    'id',
+    'event',
+    'created_at',
+    'commit_id',
+    {
+      actor: [
+        'login'
+      ]
+    },
+    {
+      issue: [
+        'number'
+      ]
     }
+  ];
 
-    // var js = fs.readFileSync(data[i], 'utf8');
+  var obj;
 
-    // console.log(JSON.parse(js));
+  try {
+    obj = JSON.parse(fs.readFileSync(file, 'utf8'));
+    //console.log(obj[0]);
+    obj = JSON.stringify(simplify(obj, fields));
 
+    fs.writeFile(file, obj, function(err) {
+
+      if ( err ) {
+        console.log('ERROR: ', err.message);
+        return;
+      }
+
+      console.log('Saved: ', file);
+
+    });
+    //console.log('-----------------------------------------------------');
+    //console.log(obj[0]);
+  } catch(e) {
+    console.log(e.constructor.name + ':', e.message);
   }
 
+}
+
+glob(__dirname + '/json/commits/*.json', function(err, data) {
+  var i = 0, max = data.length;
+
+  var itv = setInterval(function() {
+    if ( i === max ) {
+      clearInterval(itv);
+      return;
+    }
+    simplifyCommits(data[i++]);
+  }, TIMEOUT);
 });
+
+glob(__dirname + '/json/events/*.json', function(err, data) {
+  var i = 0, max = data.length;
+
+  var itv = setInterval(function() {
+    if ( i === max ) {
+      clearInterval(itv);
+      return;
+    }
+    simplifyEvents(data[i++]);
+  }, TIMEOUT);
+});
+
+glob(__dirname + '/json/issues/*.json', function(err, data) {
+  var i = 0, max = data.length;
+  var itv = setInterval(function() {
+    if ( i === max ) {
+      clearInterval(itv);
+      return;
+    }
+    simplifyIssues(data[i++]);
+  }, TIMEOUT);
+});
+
+glob(__dirname + '/json/reviews/*.json', function(err, data) {
+  var i = 0, max = data.length;
+  var itv = setInterval(function() {
+    if ( i === max ) {
+      clearInterval(itv);
+      return;
+    }
+    simplifyReviews(data[i++]);
+  }, TIMEOUT);
+});
+
+glob(__dirname + '/json/pulls/*.json', function(err, data) {
+  var i = 0, max = data.length;
+  var itv = setInterval(function() {
+    if ( i === max ) {
+      clearInterval(itv);
+      return;
+    }
+    simplifyPullRequest(data[i++]);
+  }, TIMEOUT);
+});//*/
