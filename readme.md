@@ -35,6 +35,20 @@ Open the terminal at the project folder and type:
   $ node metrics.js -o $owner -r $repo -p $proxy
 ```
 
+All the data goes to the folder `json`, that MUST exist.
+
+Once the data is downloaded, you need to simplify -> bundle -> generate statistics. You can do that with the next commands:
+
+```bash
+  $ node simplify.js
+  $ node bundle.js
+  $ node genStats.js
+```
+
+That process is necesary because the github API provides a lot of data that we don't use, so in order to reduce the computational charge inside the browser, we do all the statistics before and then just show it.
+
+The simplification process can reduce up to ***11 times*** the size of the files.
+
 Then run a static server at the same folder. For example:
 
 ```bash
