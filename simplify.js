@@ -22,7 +22,7 @@ function __simpl(obj, fields) {
   var temp = {};
 
   if ( !obj ) {
-    return temp;
+    return obj;
   }
 
   for (var j = 0, max1 = fields.length; j < max1; j += 1) {
@@ -73,13 +73,24 @@ function simplifyPullRequest(file) {
     'created_at',
     'closed_at',
     'merged_at',
-    'labels',
     'state',
     'number',
-    'requested_reviewers',
+    'assignees',
     {
-      head: [
-        'user'
+      user: [
+        'login',
+        'id'
+      ]
+    },
+    {
+      labels: [
+        'color',
+        'name'
+      ]
+    },
+    {
+      requested_reviewers: [
+        'login'
       ]
     }
   ];
@@ -111,11 +122,23 @@ function simplifyPullRequest(file) {
 
 function simplifyIssues(file) {
 
+  var userInfo = [ 'login', 'id' ];
   var fields = [
     'title',
     'created_at',
     'closed_at',
-    'user',
+    {
+      user: userInfo
+    },
+    {
+      labels: [
+        'name',
+        'color'
+      ]
+    },
+    {
+      assignees: userInfo
+    },
     'state',
     'number',
     'comments'
@@ -149,10 +172,10 @@ function simplifyIssues(file) {
 function simplifyCommits(file) {
 
   var fields = [
+    'sha',
     {
       commit: [
         'author',
-        'committer',
         'message',
         {
           tree: [
@@ -160,6 +183,13 @@ function simplifyCommits(file) {
           ]
         },
         'comment_count'
+      ],
+      author: [
+        'login',
+        'id'
+      ],
+      parents: [
+        'sha'
       ]
     }
   ];
@@ -196,9 +226,11 @@ function simplifyReviews(file) {
     'state',
     {
       user: [
-        'login'
+        'login',
+        'id'
       ]
-    }
+    },
+    'pull_request_url'
   ];
 
   var obj;
@@ -270,59 +302,28 @@ function simplifyEvents(file) {
 
 }
 
-glob(__dirname + '/json/commits/*.json', function(err, data) {
-  var i = 0, max = data.length;
+function makeSimplification(prefix, callback) {
 
-  var itv = setInterval(function() {
-    if ( i === max ) {
-      clearInterval(itv);
-      return;
-    }
-    simplifyCommits(data[i++]);
-  }, TIMEOUT);
-});
+  glob(__dirname + '/json/' + prefix + '*.json', function(err, data) {
+    var i = 0, max = data.length;
 
-glob(__dirname + '/json/events/*.json', function(err, data) {
-  var i = 0, max = data.length;
+    var itv = setInterval(function() {
+      if ( i === max ) {
+        clearInterval(itv);
+        return;
+      }
+      if ( data[i].indexOf('bundle') > -1 ) {
+        i++;
+      } else {
+        callback(data[i++]);
+      }
+    }, TIMEOUT);
+  });
 
-  var itv = setInterval(function() {
-    if ( i === max ) {
-      clearInterval(itv);
-      return;
-    }
-    simplifyEvents(data[i++]);
-  }, TIMEOUT);
-});
+}
 
-glob(__dirname + '/json/issues/*.json', function(err, data) {
-  var i = 0, max = data.length;
-  var itv = setInterval(function() {
-    if ( i === max ) {
-      clearInterval(itv);
-      return;
-    }
-    simplifyIssues(data[i++]);
-  }, TIMEOUT);
-});
-
-glob(__dirname + '/json/reviews/*.json', function(err, data) {
-  var i = 0, max = data.length;
-  var itv = setInterval(function() {
-    if ( i === max ) {
-      clearInterval(itv);
-      return;
-    }
-    simplifyReviews(data[i++]);
-  }, TIMEOUT);
-});
-
-glob(__dirname + '/json/pulls/*.json', function(err, data) {
-  var i = 0, max = data.length;
-  var itv = setInterval(function() {
-    if ( i === max ) {
-      clearInterval(itv);
-      return;
-    }
-    simplifyPullRequest(data[i++]);
-  }, TIMEOUT);
-});//*/
+makeSimplification('commits', simplifyCommits);
+makeSimplification('events', simplifyEvents);
+makeSimplification('issues', simplifyIssues);
+makeSimplification('review', simplifyReviews);
+makeSimplification('pr', simplifyPullRequest);

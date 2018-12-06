@@ -4,6 +4,8 @@
   <head>
     <meta charset="UTF-8">
     <title>Pull Requests</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/style.css">
   </head>
 
@@ -34,7 +36,7 @@
               </tr>
               <tr ng-repeat="user in users | orderBy:userField:userOrder">
                 <td ng-bind="user.name"></td>
-                <td ng-bind="user.pulls + ' (' + getPercent(user.pulls, stats.all) + ')'"></td>
+                <td ng-bind="user.pulls + ' (' + user.pullsPercent + '%)'"></td>
               </tr>
             </table>
           </div>
@@ -49,42 +51,17 @@
                 <th ng-bind="'Merged'"></th>
               </tr>
               <tr>
-                <td ng-bind="stats.all"></td>
-                <td ng-bind="stats.open + ' (' + getPercent(stats.open, stats.all) + ')'"></td>
-                <td ng-bind="stats.closed + ' (' + getPercent(stats.closed, stats.all) + ')'"></td>
-                <td ng-bind="stats.merged + ' (' + getPercent(stats.merged, stats.all) + ')'"></td>
+                <td ng-bind="stats.pr.all"></td>
+                <td ng-bind="stats.pr.open + ' (' + stats.pr.openPercent + '%)'"></td>
+                <td ng-bind="stats.pr.closed + ' (' + stats.pr.closedPercent + '%)'"></td>
+                <td ng-bind="stats.pr.merged + ' (' + stats.pr.mergedPercent + '%)'"></td>
               </tr>
             </table>
             <select ng-model="pullState" ng-change="updatePullRequestFilter()">
               <option ng-repeat="state in PR_STATES" ng-click="pullState = state" ng-bind="state" value="{{state}}"></option>
             </select>
-            <ul class="pagination-container">
-              <li class="pagination-number" ng-class="{ selected: pos + 1 === pagination }" ng-repeat="(pos, value) in _tempPr track by $index" ng-click="setPage(pos+1)" ng-bind="pos+1"></li>
-            </ul>
-            <table ng-hide="pullRequestError">
-              <tr>
-                <th ng-bind="'State'"></th>
-                <th ng-bind="'User'"></th>
-                <th ng-bind="'Title'"></th>
-                <th ng-bind="'Created to Merged'"></th>
-                <th ng-bind="'Reviews'"></th>
-                <th ng-bind="'Reviewers'"></th>
-                <th ng-bind="'Labels'"></th>
-              </tr>
-              <tr ng-repeat="pr in filteredPullRequests">
-                <td ng-bind="pr.state" class="{{pr.state}}"></td>
-                <td ng-bind="'@' + pr.head.user.login"></td>
-                <td ng-bind="pr.title"></td>
-                <td ng-bind="pr.timeToMerge"></td>
-                <td ng-bind="pr.reviews.length"></td>
-                <td>
-                  <span class="reviewer" ng-repeat="reviewer in pr.requested_reviewers" ng-bind="reviewer.login"></span>
-                </td>
-                <td>
-                  <span class="label" ng-repeat="label in pr.labels" ng-bind="label.name" ng-style="{ 'background-color': '#' + label.color, 'color': inverseColor(label.color) }"></span>
-                </td>
-              </tr>
-            </table>
+            <pagination pagination="pagination.pr" type="pr" paginator="_tempPr"></pagination>
+            <pulls source="filteredPullRequests"></pulls>
           </div>
         </div>
         <div class="tab" ng-show="timeRange === 'diario'">
@@ -95,30 +72,7 @@
               </div>
               <div class="card-body">
                 <div class="row" ng-show="dayPulls.length > 0">
-                  <table>
-                    <tr>
-                      <th ng-bind="'State'"></th>
-                      <th ng-bind="'User'"></th>
-                      <th ng-bind="'Title'"></th>
-                      <th ng-bind="'Created to Merged'"></th>
-                      <th ng-bind="'Reviews'"></th>
-                      <th ng-bind="'Reviewers'"></th>
-                      <th ng-bind="'Labels'"></th>
-                    </tr>
-                    <tr ng-repeat="pr in dayPulls">
-                      <td ng-bind="pr.state" class="{{pr.state}}"></td>
-                      <td ng-bind="'@' + pr.head.user.login"></td>
-                      <td ng-bind="pr.title"></td>
-                      <td ng-bind="pr.timeToMerge"></td>
-                      <td ng-bind="pr.reviews.length"></td>
-                      <td>
-                        <span class="reviewer" ng-repeat="reviewer in pr.requested_reviewers" ng-bind="reviewer.login"></span>
-                      </td>
-                      <td>
-                        <span class="label" ng-repeat="label in pr.labels" ng-bind="label.name" ng-style="{ 'background-color': '#' + label.color, 'color': inverseColor(label.color) }"></span>
-                      </td>
-                    </tr>
-                  </table>
+                  <pulls source="dayPulls"></pulls>
                 </div>
               </div>
             </div>
@@ -132,30 +86,7 @@
               </div>
               <div class="card-body">
                 <div class="row" ng-show="weekPulls.length > 0">
-                  <table>
-                    <tr>
-                      <th ng-bind="'State'"></th>
-                      <th ng-bind="'User'"></th>
-                      <th ng-bind="'Title'"></th>
-                      <th ng-bind="'Created to Merged'"></th>
-                      <th ng-bind="'Reviews'"></th>
-                      <th ng-bind="'Reviewers'"></th>
-                      <th ng-bind="'Labels'"></th>
-                    </tr>
-                    <tr ng-repeat="pr in weekPulls">
-                      <td ng-bind="pr.state" class="{{pr.state}}"></td>
-                      <td ng-bind="'@' + pr.head.user.login"></td>
-                      <td ng-bind="pr.title"></td>
-                      <td ng-bind="pr.timeToMerge"></td>
-                      <td ng-bind="pr.reviews.length"></td>
-                      <td>
-                        <span class="reviewer" ng-repeat="reviewer in pr.requested_reviewers" ng-bind="reviewer.login"></span>
-                      </td>
-                      <td>
-                        <span class="label" ng-repeat="label in pr.labels" ng-bind="label.name" ng-style="{ 'background-color': '#' + label.color, 'color': inverseColor(label.color) }"></span>
-                      </td>
-                    </tr>
-                  </table>
+                  <pulls source="weekPulls"></pulls>
                 </div>
               </div>
             </div>
@@ -169,30 +100,7 @@
               </div>
               <div class="card-body">
                 <div class="row" ng-show="monthPulls.length > 0">
-                  <table>
-                    <tr>
-                      <th ng-bind="'State'"></th>
-                      <th ng-bind="'User'"></th>
-                      <th ng-bind="'Title'"></th>
-                      <th ng-bind="'Created to Merged'"></th>
-                      <th ng-bind="'Reviews'"></th>
-                      <th ng-bind="'Reviewers'"></th>
-                      <th ng-bind="'Labels'"></th>
-                    </tr>
-                    <tr ng-repeat="pr in monthPulls">
-                      <td ng-bind="pr.state" class="{{pr.state}}"></td>
-                      <td ng-bind="'@' + pr.head.user.login"></td>
-                      <td ng-bind="pr.title"></td>
-                      <td ng-bind="pr.timeToMerge"></td>
-                      <td ng-bind="pr.reviews.length"></td>
-                      <td>
-                        <span class="reviewer" ng-repeat="reviewer in pr.requested_reviewers" ng-bind="reviewer.login"></span>
-                      </td>
-                      <td>
-                        <span class="label" ng-repeat="label in pr.labels" ng-bind="label.name" ng-style="{ 'background-color': '#' + label.color, 'color': inverseColor(label.color) }"></span>
-                      </td>
-                    </tr>
-                  </table>
+                  <pulls source="monthPulls"></pulls>
                 </div>
               </div>
             </div>
@@ -204,6 +112,7 @@
   </body>
   <script type="text/javascript" src="js/moment-with-locales.min.js"></script>
   <script type="text/javascript" src="js/angularjs-1.4.8.js"></script>
+  <script type="text/javascript" src="js/ui.js"></script>
   <script type="text/javascript" src="js/pulls.js"></script>
 
 </html>

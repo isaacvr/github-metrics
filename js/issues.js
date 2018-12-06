@@ -70,10 +70,12 @@
 
         $scope.issueState = 'open';
         $scope.stats = {
-          open: 0,
-          closed: 0,
-          all: 0,
-          merged: 0
+          is: {
+            open: 0,
+            closed: 0,
+            all: 0,
+            merged: 0
+          }
         };
 
         $scope.timeRange = 'all';
@@ -117,7 +119,7 @@
 
       $scope.setPage = function setPage(name, num) {
 
-        var tot = $scope.stats[$scope.issueState];
+        var tot = $scope.stats.is[$scope.issueState];
         var ppp = $scope.ISSUES_PER_PAGE;
         var cant = Math.floor((tot - 1) / ppp) + 1;
 
@@ -148,7 +150,7 @@
           return;
         }
 
-        var tot = $scope.stats[$scope.issueState];
+        var tot = $scope.stats.is[$scope.issueState];
         var ppp = $scope.ISSUES_PER_PAGE;
         var cant = Math.floor((tot - 1) / ppp) + 1;
 
@@ -159,6 +161,8 @@
         $scope.issuesOffset = (page - 1) * ppp;
 
         $scope.filteredIssues = $scope.issues.filter($scope.issuesFilter);
+
+        $scope.setColumnVisibility($scope.filteredIssues);
 
       };
 
@@ -257,9 +261,10 @@
           return '--';
         }
 
-        $scope.stats.merged += 1;
+        $scope.stats.is.merged += 1;
 
         var times = ['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds'];
+        var _times = ['yr', 'mth', 'wk', 'd', 'h', 'm', 's'];
         var offset = 0;
         var val = 0;
 
@@ -272,11 +277,7 @@
 
         //DEBUG('Diff: ', val, times[offset]);
 
-        var resp = times[offset];
-
-        if (val === 1) {
-          resp = resp.substr(0, resp.length - 1);
-        }
+        var resp = _times[offset];
 
         return val + ' ' + resp;
 
@@ -306,12 +307,13 @@
 
       $scope.timeScaleAdd = function timeScaleAdd(iss) {
 
-        var initialDay = moment(iss.created_at_moment);
+        var created_at_moment = moment(iss.created_at, 'DD/MM/YYYY');
+        var initialDay = moment(created_at_moment);
         initialDay.subtract( initialDay.format('d'), 'days' );
 
-        var day = iss.created_at_moment.format('DD-MM-YYYY');
+        var day = created_at_moment.format('DD-MM-YYYY');
         var week = initialDay.format('DD-MM-YYYY');
-        var month = iss.created_at_moment.format('MM-YYYY');
+        var month = created_at_moment.format('MM-YYYY');
 
         $scope.timeScaleDay[ day ] = $scope.timeScaleDay[ day ] || [];
         $scope.timeScaleDay[ day ].push(iss);
@@ -349,40 +351,9 @@
 
         var i, len = data.length;
 
-        var model = {
-          created_at: moment,
-          closed_at: moment
-        };
-
         for (i = 0; i < len; i += 1) {
-
-          $scope.addReferences(data[i].title);
-          $scope.stats.all += 1;
-          $scope.stats[data[i].state] += 1;
-
-          for (var j in model) {
-            if (model.hasOwnProperty(j) === true) {
-
-              data[i][j + '_moment'] = model[j](data[i][j]);
-
-              if (data[i][j]) {
-                data[i][j] = data[i][j + '_moment'].format($scope.DATE_FORMAT);
-              } else {
-                data[i][j] = '--';
-              }
-            }
-          }
-
-          $scope.updateIssueSteps(data[i]);
-
-          $scope.addIssue(data[i].user.login);
           $scope.timeScaleAdd(data[i]);
-
         }
-
-        //DEBUG('USERS parseIssues: ', $scope.users);
-
-        return data;
 
       };
 
@@ -510,86 +481,88 @@
 
       };
 
+      $scope.setColumnVisibility = function setColumnVisibility(obj) {
+        var props = [ 'assigned_at', 'closed_at', 'commited_at', 'created_at', 'merged_at', 'comments' ];
+        var emptyValues = {
+          assigned_at: "--",
+          closed_at: "--",
+          commited_at: "--",
+          created_at: "--",
+          merged_at: "--",
+          comments: 0
+        };//*/
+
+        var visibility = {
+          assigned_at: false,
+          closed_at: false,
+          commited_at: false,
+          created_at: false,
+          merged_at: false,
+          comments: false
+        };//*/
+
+        obj.assignees = false;
+        for (var j = 0; j < obj.length; j += 1) {
+          for (var k = 0; k < props.length; k += 1) {
+            if ( obj[j].hasOwnProperty(props[k]) === true ) {
+              if ( obj[j][ props[k] ] != emptyValues[ props[k] ] ) {
+                visibility[ props[k] ] = true;
+                //console.log('Hay uno no vacio: ', props[k], obj[j][ props[k] ]);
+              }
+            }
+          }
+          if (obj[j].hasOwnProperty('assignees') === false) {
+            console.log('Bicho raro encontrado: ', obj[j]);
+          } else {
+            obj.assignees = obj.assignees || (obj[j].assignees.length > 0);
+          }
+        }
+        for (var j = 0; j < props.length; j += 1) {
+          obj[ props[j] ] = visibility[ props[j] ];
+        }
+      };
+
       $scope.getIssues = function getIssues(page) {
 
-        page = page || '';
-        var pageNumber = ~~page;
-
-        if (pageNumber === 0) {
-          pageNumber = 1;
-          $scope.issues = [];
-        }
-
-        var url = '/json/issues' + page + '.json';
-
-        $scope.issuesError = false;
+        var url = '/json/issues_stats.json';
 
         $http
         .get(url)
         .success(function(data) {
 
-          $scope.issues = $scope.issues.concat($scope.parseIssues(data));
+          //console.log(data);
 
-          var len = data.length;
-          pageNumber += 1;
+          $scope.issues = data.issues;
+          $scope.references = data.references;
+          $scope.stats = data.stats;
+          $scope.users = data.users;
 
-          $scope.getIssues(pageNumber);
+          $scope.parseIssues($scope.issues);
+
+          for (var i in $scope.timeScaleDay) {
+            if ( $scope.timeScaleDay.hasOwnProperty(i) === true ) {
+              $scope.setColumnVisibility($scope.timeScaleDay[i]);
+            }
+          }
+
+          for (var i in $scope.timeScaleWeek) {
+            if ( $scope.timeScaleWeek.hasOwnProperty(i) === true ) {
+              $scope.setColumnVisibility($scope.timeScaleWeek[i]);
+            }
+          }
+
+          for (var i in $scope.timeScaleMonth) {
+            if ( $scope.timeScaleMonth.hasOwnProperty(i) === true ) {
+              $scope.setColumnVisibility($scope.timeScaleMonth[i]);
+            }
+          }
+
+          $scope.setPage('is', 1);
 
         })
         .catch(function(err) {
 
           DEBUG('ISSUES ERROR: ', err);
-
-          if (pageNumber === 1) {
-            $scope.issuesError = true;
-          } else {
-            $scope.getEvents();
-            $scope.setPage('is', 1);
-            DEBUG('STATS: ', $scope.stats);
-            console.timeEnd('loadIssues');
-          }
-
-        });
-
-      };
-
-      $scope.getPullRequests = function getPullRequests(page) {
-
-        page = page || '';
-        var pageNumber = ~~page;
-
-        if (pageNumber === 0) {
-          pageNumber = 1;
-          $scope.pullRequests = {};
-        }
-
-        var url = '/json/pr' + page + '.json';
-
-        $scope.pullRequestError = false;
-
-        $http
-        .get(url)
-        .success(function(data) {
-
-          var len = data.length;
-
-          for (var i = 0; i < len; i += 1) {
-            $scope.pullRequests[ data[i].number ] = moment( data[i].created_at );
-          }
-
-          pageNumber += 1;
-
-          $scope.getPullRequests(pageNumber);
-
-        })
-        .catch(function(err) {
-
-          /**
-           * Esto es para asegurarnos que se cargaron todos los
-           * datos de los PR porque luego son usados para las
-           * stats de los issues
-           */
-          $scope.getIssues();
 
         });
 
@@ -601,7 +574,8 @@
 
         $scope.init();
 
-        $scope.getPullRequests();
+        //$scope.getPullRequests();
+        $scope.getIssues();
 
       };
 

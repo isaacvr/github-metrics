@@ -1,6 +1,9 @@
 # TODO + data
-  * Create bundle files
-  * Generate files with the general statistics in order to decrease the computational work in the browser
+  * Add `assignee` and `closer` dimensions and rename `User name` to `Author`
+  * Reimplement the update of the downloaded data
+  * Delete all the functions that are unused
+  * Reduce the file's open/close operations when simplifying/decomposing/bundling data (use RAM instead)
+  * Delete `decompose` operation (no longer needed)
 
 ## Instructions...
   == Estadísticas de github
@@ -21,6 +24,8 @@
     - # issues cerrados
     - # de reviews en los PR q creó
     - tiempo entre fases de los issues (creado, asignado, primer commit, cerrado)
+    - Agregar metricas de los forks
+    - Porciento de trabajo entre el upstream y el fork
 
     todo eso:
 

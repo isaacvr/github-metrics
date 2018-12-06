@@ -1,6 +1,6 @@
 (function() {
 
-  var myApp = angular.module('metricsGenerator', []);
+  var myApp = angular.module('metricsGenerator', ['ui']);
 
   myApp.controller('pullsController', [
     '$scope',
@@ -38,7 +38,9 @@
 
         $scope.pullState = 'open';
 
-        $scope.pagination = 1;
+        $scope.pagination = {
+          pr: 1
+        };
 
         $scope.pullRequestCant = $scope.PULLS_PER_PAGE;
         $scope.pullRequestOffset = 0;
@@ -68,10 +70,12 @@
 
         $scope.pullState = 'open';
         $scope.stats = {
-          open: 0,
-          closed: 0,
-          all: 0,
-          merged: 0
+          pr: {
+            open: 0,
+            closed: 0,
+            all: 0,
+            merged: 0
+          }
         };
 
         $scope.timeRange = 'all';
@@ -113,9 +117,9 @@
 
       };
 
-      $scope.setPage = function setPage(num) {
+      $scope.setPage = function setPage(name, num) {
 
-        var tot = $scope.stats[$scope.pullState];
+        var tot = $scope.stats.pr[$scope.pullState];
         var ppp = $scope.PULLS_PER_PAGE;
         var cant = Math.floor((tot - 1) / ppp) + 1;
 
@@ -123,7 +127,7 @@
           return;
         }
 
-        $scope.pagination = num;
+        $scope.pagination[name] = num;
         $scope.updatePullRequestFilter(true);
       };
 
@@ -142,21 +146,23 @@
         change = !change;
 
         if ( change === true ) {
-          $scope.setPage(1);
+          $scope.setPage('pr', 1);
           return;
         }
 
-        var tot = $scope.stats[$scope.pullState];
+        var tot = $scope.stats.pr[$scope.pullState];
         var ppp = $scope.PULLS_PER_PAGE;
         var cant = Math.floor((tot - 1) / ppp) + 1;
 
         $scope._tempPr = new Array(cant);
 
         $scope.pullRequestCant = ppp;
-        var page = $scope.pagination;
+        var page = $scope.pagination.pr;
         $scope.pullRequestOffset = (page - 1) * ppp;
 
         $scope.filteredPullRequests = $scope.pullRequests.filter($scope.pullRequestFilter);
+
+        $scope.setColumnVisibility($scope.filteredPullRequests);
 
       };
 
@@ -232,7 +238,7 @@
             c = 0;
           } else {
             c = 255;
-          }
+          }//*/
 
           parts.push(('00' + c.toString(16)).substr(-2, 2));
 
@@ -276,7 +282,7 @@
           return '--';
         }
 
-        $scope.stats.merged += 1;
+        $scope.stats.pr.merged += 1;
 
         var times = ['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds'];
         var offset = 0;
@@ -325,12 +331,13 @@
 
       $scope.timeScaleAdd = function timeScaleAdd(pr) {
 
-        var initialDay = moment(pr.created_at_moment);
+        var initialDay = moment(pr.created_at, 'DD/MM/YYYY');
+        var created_at_moment = moment(initialDay);
         initialDay.subtract( initialDay.format('d'), 'days' );
 
-        var day = pr.created_at_moment.format('DD-MM-YYYY');
+        var day = created_at_moment.format('DD-MM-YYYY');
         var week = initialDay.format('DD-MM-YYYY');
-        var month = pr.created_at_moment.format('MM-YYYY');
+        var month = created_at_moment.format('MM-YYYY');
 
         $scope.timeScaleDay[ day ] = $scope.timeScaleDay[ day ] || [];
         $scope.timeScaleDay[ day ].push(pr);
@@ -343,46 +350,56 @@
 
       };
 
+      $scope.setColumnVisibility = function setColumnVisibility(obj) {
+
+        var props = [ 'created_at', 'closed_at', 'merged_at', 'timeToMerge' ];
+        var arrProps = [ 'requested_reviewers', 'reviews', 'labels' ];
+
+        var emptyValues = {
+          created_at: "--",
+          closed_at: "--",
+          merged_at: "--",
+          timeToMerge: "--"
+        };//*/
+
+        var visibility = {
+          created_at: false,
+          closed_at: false,
+          merged_at: false,
+          timeToMerge: false
+        };//*/
+
+        for (var k = 0; k < props.length; k += 1) {
+          obj[ arrProps[k] ] = false;
+        }
+
+        for (var j = 0; j < obj.length; j += 1) {
+          for (var k = 0; k < props.length; k += 1) {
+            if ( obj[j].hasOwnProperty(props[k]) === true ) {
+              if ( obj[j][ props[k] ] != emptyValues[ props[k] ] ) {
+                visibility[ props[k] ] = true;
+                //console.log('Hay uno no vacio: ', props[k], obj[j][ props[k] ]);
+              }
+            }
+          }
+          for (var k = 0; k < arrProps.length; k += 1) {
+            if (obj[j].hasOwnProperty(arrProps[k]) === true) {
+              obj[ arrProps[k] ] = obj[ arrProps[k] ] || (obj[j][ arrProps[k] ].length > 0);
+            }
+          }
+        }
+        for (var j = 0; j < props.length; j += 1) {
+          obj[ props[j] ] = visibility[ props[j] ];
+        }
+      };
+
       $scope.parsePullRequests = function parsePullRequests(data) {
 
         var i, len = data.length;
 
-        var model = {
-          created_at: moment,
-          closed_at: moment,
-          merged_at: moment
-        };
-
         for (i = 0; i < len; i += 1) {
-
-          $scope.addReferences(data[i].title);
-          $scope.stats.all += 1;
-          $scope.stats[data[i].state] += 1;
-
-          for (var j in model) {
-            if (model.hasOwnProperty(j) === true) {
-
-              data[i][j + '_moment'] = model[j](data[i][j]);
-
-              if (data[i][j]) {
-                data[i][j] = data[i][j + '_moment'].format($scope.DATE_FORMAT);
-              } else {
-                data[i][j] = '--';
-              }
-            }
-          }
-
-          $scope.addPullRequest(data[i].head.user.login);
           $scope.timeScaleAdd(data[i]);
-
-          data[i].timeToMerge = $scope.getTimeToMerge(
-            data[i].created_at_moment,
-            data[i].merged_at_moment
-            );
-
         }
-
-        return data;
 
       };
 
@@ -401,15 +418,16 @@
 
       $scope.getPullRequests = function getPullRequests(page) {
 
-        page = page || '';
+        /*page = page || '';
         var pageNumber = ~~page;
 
         if (pageNumber === 0) {
           pageNumber = 1;
           $scope.pullRequests = [];
-        }
+        }//*/
 
-        var url = '/json/pr' + page + '.json';
+        //var url = '/json/pr' + page + '.json';
+        var url = '/json/pulls_stats.json';
 
         $scope.pullRequestError = false;
 
@@ -417,39 +435,41 @@
         .get(url)
         .success(function(data) {
 
-          $scope.pullRequests = $scope.pullRequests.concat($scope.parsePullRequests(data));
+          //$scope.pullRequests = $scope.pullRequests.concat($scope.parsePullRequests(data));
+          $scope.pullRequests = data.pulls;
+          $scope.users = data.users;
+          $scope.stats = data.stats;
 
-          var len = data.length;
+          $scope.parsePullRequests($scope.pullRequests);
 
-          for (var i = 0; i < len; i += 1) {
-            data[i].reviews = [];
-            $scope.getReviews(data[i]);
+          for (var i in $scope.timeScaleDay) {
+            if ( $scope.timeScaleDay.hasOwnProperty(i) === true ) {
+              $scope.setColumnVisibility($scope.timeScaleDay[i]);
+            }
           }
 
-          pageNumber += 1;
+          for (var i in $scope.timeScaleWeek) {
+            if ( $scope.timeScaleWeek.hasOwnProperty(i) === true ) {
+              $scope.setColumnVisibility($scope.timeScaleWeek[i]);
+            }
+          }
 
-          $scope.getPullRequests(pageNumber);
+          for (var i in $scope.timeScaleMonth) {
+            if ( $scope.timeScaleMonth.hasOwnProperty(i) === true ) {
+              $scope.setColumnVisibility($scope.timeScaleMonth[i]);
+            }
+          }
+
+          $scope.setPage('pr', 1);
 
         })
         .catch(function(err) {
-
           DEBUG('PR ERROR: ', err);
-
-          if (pageNumber === 1) {
-            $scope.pullRequestError = true;
-          } else {
-            $scope.setPage(1);
-            DEBUG('STATS: ', $scope.stats);
-            console.timeEnd('loadPulls');
-          }
-
         });
 
       };
 
       $scope.generateMetrics = function generateMetrics() {
-
-        console.time('loadPulls');
 
         $scope.init();
 

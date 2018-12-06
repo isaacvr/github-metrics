@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Metrics Generator</title>
+  <link rel="stylesheet" href="css/font-awesome.min.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
   <body ng-app="metricsGenerator" ng-controller="metricsController">
@@ -15,7 +16,7 @@
       </div>
       <div class="card-body">
         <div class="row text-center">
-          <button ng-click="generateMetrics()"> Get Info </button>
+          <button class="btn" ng-click="generateMetrics()"> Get Info </button>
         </div>
         <div class="row tab-container">
           <div class="tab-selector" ng-click="selectTab(0)" ng-class="{ 'selected-tab': selectedTab === 0 }">
@@ -69,7 +70,8 @@
               <option ng-repeat="state in PR_STATES" ng-click="pullState = state" ng-bind="state" value="{{state}}"></option>
             </select>
             <pagination pagination="pagination.pr" type="pr" paginator="_tempPr"></pagination>
-            <table ng-hide="pullRequestError">
+            <pulls source="filteredPullRequests"></pulls>
+            <!--table ng-hide="pullRequestError">
               <tr>
                 <th>State</th>
                 <th>#</th>
@@ -83,7 +85,7 @@
               <tr ng-repeat="pr in filteredPullRequests">
                 <td ng-bind="pr.state" class="{{pr.state}}"></td>
                 <td ng-bind="pr.number"></td>
-                <td ng-bind="'@' + pr.head.user.login"></td>
+                <td ng-bind="'@' + pr.user.login"></td>
                 <td ng-bind="pr.title"></td>
                 <td ng-bind="pr.timeToMerge"></td>
                 <td ng-bind="pr.reviews.length"></td>
@@ -94,7 +96,7 @@
                   <span class="label" ng-repeat="label in pr.labels" ng-bind="label.name" ng-style="{ 'background-color': '#' + label.color, 'color': inverseColor(label.color) }"></span>
                 </td>
               </tr>
-            </table>
+            </table-->
           </div>
           <div class="row" ng-show="issues.length > 0">
             <h2 class="card-header" ng-bind="'Issues'"></h2>
@@ -103,7 +105,8 @@
               <option ng-repeat="state in IS_STATES" ng-click="issueState = state" ng-bind="state" value="{{state}}"></option>
             </select>
             <pagination pagination="pagination.is" type="is" paginator="_tempIs"></pagination>
-            <table ng-hide="issuesError">
+            <issues source="filteredIssues"></issues>
+            <!--table ng-hide="issuesError">
               <tr>
                 <th>State</th>
                 <th>#</th>
@@ -122,31 +125,110 @@
                 <td ng-bind="issue.closed_at"></td>
                 <td ng-bind="issue.comments"></td>
               </tr>
-            </table>
+            </table-->
           </div>
         </div>
         <div class="tab" ng-show="selectedTab === 1">
-          <div class="row commits-per-hour">
-            <h2 ng-bind="'Commits per hour'" class="text-center"></h2>
-            <ul class="tab-container">
-              <li class="tab-selector" ng-class="{ 'selected-tab': idx === selectedDay }" ng-repeat="(idx, day) in DAYS" value="{{idx}}" ng-click="selectPunchCardDay(idx)" ng-bind="day"></li>
+          <div class="row">
+            <h2 ng-bind="'Statistics (skycoin/skycoin)'" class="text-center"></h2>
+            <table>
+              <tr>
+                <th>Summarize by</th>
+                <th>Filter</th>
+              </tr>
+              <tr>
+                <td>
+                  <div class="radio-item">
+                    <input type="radio" name="summarize" ng-model="summary.dimension" value="authorName" checked>
+                    <span>Author</span>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" name="summarize" ng-model="summary.dimension" value="assignee" checked>
+                    <span>Assignee</span>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" name="summarize" ng-model="summary.dimension" value="closer" checked>
+                    <span>Closer</span>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" name="summarize" ng-model="summary.dimension" value="hour">
+                    <span>Hour</span>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" name="summarize" ng-model="summary.dimension" value="day">
+                    <span>Day</span>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" name="summarize" ng-model="summary.dimension" value="month">
+                    <span>Month</span>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" name="summarize" ng-model="summary.dimension" value="year">
+                    <span>Year</span>
+                  </div>
+                </td>
+                <td>
+                  <table>
+                    <tr>
+                      <td class="text-left">
+                        <input type="checkbox" name="filterByName" ng-model="summary.filterByName">
+                        <span>User</span>
+                      </td>
+                      <td>
+                        <input type="text" class="p95" placeholder="Username..." ng-model="summary.userFilter" ng-disabled="!summary.filterByName">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="text-left">
+                        <input type="checkbox" name="filterByRange" ng-model="summary.filterByRange">
+                        <span>Date Range</span>
+                      </td>
+                      <td>
+                        <input type="text" placeholder="dd/mm/yyyy" ng-model="summary.initialDay" ng-disabled="!summary.filterByRange">
+                        <strong>to</strong>
+                        <input type="text" placeholder="dd/mm/yyyy" ng-model="summary.finalDay" ng-disabled="!summary.filterByRange">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="text-left">
+                        <input type="checkbox" name="filterByState" ng-model="summary.filterByState">
+                        <span>State</span>
+                      </td>
+                      <td>
+                        <input type="text" placeholder="State [open, closed]..." ng-model="summary.state" ng-disabled="!summary.filterByState">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="text-left">
+                        <input type="checkbox" name="filterByAssignee" ng-model="summary.filterByAssignee">
+                        <span>Assigned to...</span>
+                      </td>
+                      <td>
+                        <input type="text" placeholder="Assigned to..." ng-model="summary.assignee" ng-disabled="!summary.filterByAssignee">
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            <ul>
+              <li>
+                <input type="checkbox" name="showCommits" ng-model="summary.showGraphics[0]">
+                <span>Commits</span>
+              </li>
+              <li>
+                <input type="checkbox" name="showCommits" ng-model="summary.showGraphics[1]">
+                <span>Pulls</span>
+              </li>
+              <li>
+                <input type="checkbox" name="showCommits" ng-model="summary.showGraphics[2]">
+                <span>Issues</span>
+              </li>
             </ul>
-            <canvas id="commitsPerHour"></canvas>
-          </div>
-          <div class="row contribs-per-week">
-            <h2 ng-bind="'Contributions per week'" class="text-center"></h2>
-            <select>
-              <option ng-repeat="val in contribKeys | orderBy:val:true" value="{{val}}" ng-click="selectWeek(val)" ng-bind="getContribDate(val)"></option>
-            </select>
-            <canvas id="contribsPerWeek"></canvas>
-          </div>
-          <div class="row contribs-per-month">
-            <h2 ng-bind="'Contributions per month'" class="text-center"></h2>
-            <select ng-model="selectedMonth">
-              <option ng-repeat="(month, val) in commitsPerMonth" value="{{month}}" ng-bind="month" ng-click="selectCommitMonth(month)"></option>
-            </select>
-            <canvas id="contribsPerMonth"></canvas>
-          </div>
+            <button class="btn" ng-click="getSummary()">Summarize</button>
+            <canvas id="olap1" ng-show="summary.olap1"></canvas>
+            <canvas id="olap2" ng-show="summary.olap2"></canvas>
+            </div>
         </div>
       </div>
     </div>
@@ -154,6 +236,7 @@
   </body>
   <script type="text/javascript" src="js/Chart.min.js"></script>
   <script type="text/javascript" src="js/moment-with-locales.min.js"></script>
+  <script type="text/javascript" src="js/olap-cube.min.js"></script>
   <script type="text/javascript" src="js/angularjs-1.4.8.js"></script>
   <script type="text/javascript" src="js/ui.js"></script>
   <script type="text/javascript" src="js/main.js"></script>

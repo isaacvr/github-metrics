@@ -2,27 +2,32 @@ body {
   background-color: rgba(0, 0, 0, 0.1);
 }
 
+canvas {
+  max-height: 400px;
+}
+
+li {
+  list-style: none;
+}
+
 .card {
   background-color: rgba(255, 255, 255, 0.3);
   box-shadow: 1px 1px 6px rgba(0, 0, 0, 0.3);
   border-radius: 2px;
-  padding: 40px;
-  margin: 40px;
+  padding: 10px;
+  margin: 10px;
 }
 
 .card .card-header {
   text-align: center;
 }
 
-.card .card-body {
-
-}
-
 .row {
-  width: 100%;
   border-top: 1px solid rgba(0, 0, 0, 0.15);
-  padding-top: 20px;
-  padding-bottom: 20px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  margin-right: 0px;
+  margin-left: 0px;
 }
 
 .error {
@@ -35,8 +40,17 @@ body {
   text-align: center;
 }
 
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
 table {
   width: 100%;
+  border: 1px solid lightgray;
 }
 
 tr {
@@ -48,7 +62,7 @@ tr:hover {
   cursor: default;
 }
 
-tr:first-child {
+th {
   background-color: rgba(63, 79, 227, 0.8);
   color: white;
 }
@@ -72,6 +86,7 @@ tr:nth-child(2n+3):hover {
 td, th {
   text-align: center;
   padding: 10px;
+  border: 1px solid darkgray;
 }
 
 .open {
@@ -136,7 +151,6 @@ td, th {
   margin: 5px 1px;
   cursor: pointer;
   vertical-align: top;
-  height: 1.3em;
 }
 
 .pagination-container .pagination-number:hover {
@@ -175,4 +189,34 @@ td, th {
   font-size: 3em;
   color: #fffc;
   font-weight: bold;
+}
+
+input[type="text"] {
+  padding: 10px;
+  border: 1px solid lightgray;
+  border-radius: 2px;
+}
+
+.btn {
+  padding: 10px;
+  border: 1px solid lightgray;
+  border-radius: 2px;
+  margin: 9px;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.2);
+  transition: all 150ms;
+}
+
+.btn:hover {
+  padding: 12px;
+  cursor: pointer;
+  box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.radio-item, .checkbox-item {
+  text-align: left;
+  display: block;
+}
+
+.p95 {
+  width: 95%;
 }

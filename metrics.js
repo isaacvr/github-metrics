@@ -10,6 +10,7 @@ var request   = require('request');
 var chalk     = require('chalk');
 var commander = require('commander');
 var qstring   = require('querystring');
+var moment    = require('moment');
 var auth      = require('./auth');
 
 var authHeader = '';
@@ -45,6 +46,9 @@ if ( commander.hasOwnProperty('proxy') === true ) {
 var owner = commander.owner;
 var repo  = commander.repo;
 var since = '2018-01-01T00:00:00Z';
+var initDay = moment('1/11/2018', 'DD/MM/YYYY');
+var finDay = moment('30/11/2018', 'DD/MM/YYYY');
+var MAX_PAGE = 30;
 
 /// Constants
 var ISSUES_TMPL   = 'http://api.github.com/repos/:owner/:repo/issues?state=all&page=:page&per_page=100&since=' + since;
@@ -72,6 +76,10 @@ function getSingleReview(n) {
   n = n.toString();
 
   var url = reviews.replace(':number', n);
+
+  if ( fs.exists(path.join(__dirname, 'json', 'review-' + n + '.json')) === true ) {
+    return;
+  }
 
   request
     .get({
@@ -122,6 +130,10 @@ function getInfo(url, descriptor, file, number, callback, accept) {
   number = number || '';
   var realNumber = Math.max(1, ~~number);
 
+  if ( realNumber > MAX_PAGE ) {
+    return;
+  }
+
   console.log(chalk.blue('Fetching ' + descriptor + '...'));
 
   accept = accept || 'application/vnd.github.cloak-preview';
@@ -132,19 +144,11 @@ function getInfo(url, descriptor, file, number, callback, accept) {
 
   console.log(chalk.green(url));
 
-  //callback('[]', url);
-
-  //return;
-
   if ( typeof callback === 'function' ) {
     cb = callback;
   } else {
     cb = () => {};
   }
-
-  //cb('[ 1, 2 ]', url);
-
-  //return;
 
   if ( url.indexOf('client_id') === -1 ) {
     if ( url.indexOf('?') === -1 ) {
@@ -183,7 +187,7 @@ function getInfo(url, descriptor, file, number, callback, accept) {
         console.log(chalk.green('Successfully downloaded ' + descriptor + ' from ' + owner + '/' + repo));
 
       });
-      res.pipe( fs.createWriteStream( path.join(__dirname, 'json', file + number + '.json') ) );
+      res.pipe( fs.createWriteStream( path.join(__dirname, 'json', file + Date.now() + '.json') ) );
     });
 
 }
@@ -211,14 +215,18 @@ function getNextPage(data, url, descriptor, file) {
 
 }
 
-// getInfo(contrib, 'Contributions', 'contribs');
-// getInfo(activity, 'Commit Activity', 'commit_activity');
-// getInfo(particip, 'Participation', 'participation');
-// getInfo(commph, 'Commits per hour', 'punch_card');
-// getInfo(events, 'Issue Events', 'events', '', getNextPage);
-// getInfo(issues, 'Issues', 'issues', '', getNextPage);
-// getInfo(pullReq, 'Pull Requests', 'pr', '', getNextPage);
-// getInfo(commits, 'Commits', 'commits', '', getNextPage);
+getInfo(contrib, 'Contributions', 'contribs');
+getInfo(activity, 'Commit Activity', 'commit_activity');
+getInfo(particip, 'Participation', 'participation');
+getInfo(commph, 'Commits per hour', 'punch_card');
+getInfo(events, 'Issue Events', 'events', '', getNextPage);
+getInfo(issues, 'Issues', 'issues', '', getNextPage);
+getInfo(pullReq, 'Pull Requests', 'pr', '', function(data) {
+  getReviews(data);
+  //console.log(data);
+  getNextPage.apply(null, arguments);
+});
+getInfo(commits, 'Commits', 'commits', '', getNextPage);
 
 /*
 

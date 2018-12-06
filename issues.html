@@ -4,6 +4,8 @@
   <head>
     <meta charset="UTF-8">
     <title>Issues</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/style.css">
   </head>
 
@@ -28,72 +30,35 @@
         <div class="tab" ng-show="timeRange === 'all'">
           <div class="row" ng-show="users.length > 0">
             <h2 class="card-header" ng-bind="'Users'"></h2>
-            <table>
+            <table class="table table-bordered hidden">
               <tr>
-                <th ng-bind="'User'"></th>
+                <th><span class="fa fa-users"></span></th>
                 <th class="link" ng-click="selectField('issues')" ng-bind="'Issues'"></th>
               </tr>
               <tr ng-repeat="user in users | orderBy:userField:userOrder">
                 <td ng-bind="user.name"></td>
-                <td ng-bind="user.issues + ' (' + getPercent(user.issues, stats.all) + ')'"></td>
+                <td ng-bind="user.issues + ' (' + user.issuesPercent + '%' + ')'"></td>
               </tr>
             </table>
           </div>
           <div class="row" ng-show="issues.length > 0">
-            <table>
+            <table class="table table-bordered hidden">
               <tr>
                 <th ng-bind="'All'"></th>
                 <th ng-bind="'Open'"></th>
                 <th ng-bind="'Closed'"></th>
               </tr>
               <tr>
-                <td ng-bind="stats.all"></td>
-                <td ng-bind="stats.open + ' (' + getPercent(stats.open, stats.all) + ')'"></td>
-                <td ng-bind="stats.closed + ' (' + getPercent(stats.closed, stats.all) + ')'"></td>
+                <td ng-bind="stats.is.all"></td>
+                <td ng-bind="stats.is.open + ' (' + stats.is.openPercent + '%)'"></td>
+                <td ng-bind="stats.is.closed + ' (' + stats.is.closedPercent + '%)'"></td>
               </tr>
             </table>
             <select ng-model="issueState" ng-change="updateIssuesFilter()">
               <option ng-repeat="state in ISSUE_STATES" ng-click="issueState = state" ng-bind="state" value="{{state}}"></option>
             </select>
             <pagination pagination="pagination.is" type="is" paginator="_tempIs"></pagination>
-            <table ng-hide="issuesError">
-              <tr>
-                <th>State</th>
-                <th>#</th>
-                <th>User</th>
-                <th>Title</th>
-                <th>Assignees</th>
-                <th>Committers</th>
-                <th>Created At</th>
-                <th>Assigned</th>
-                <th>Commited</th>
-                <th>Merged</th>
-                <th>Closed</th>
-                <th>Labels</th>
-                <th>Comments</th>
-              </tr>
-              <tr ng-repeat="issue in filteredIssues">
-                <td ng-bind="issue.state" class="{{issue.state}}"></td>
-                <td ng-bind="'#' + issue.number"></td>
-                <td ng-bind="'@' + issue.user.login"></td>
-                <td ng-bind="issue.title"></td>
-                <td>
-                  <span class="reviewer" ng-repeat="user in issue.assignees" ng-bind="user.login"></span>
-                </td>
-                <td>
-                  <span class="reviewer" ng-repeat="user in issue.committer" ng-bind="user.login"></span>
-                </td>
-                <td ng-bind="issue.created_at"></td>
-                <td ng-bind="issue.assigned_at"></td>
-                <td ng-bind="issue.commited_at"></td>
-                <td ng-bind="issue.merged_at"></td>
-                <td ng-bind="issue.closed_at"></td>
-                <td>
-                  <span class="label" ng-repeat="label in issue.labels" ng-bind="label.name" ng-style="{ 'background-color': '#' + label.color, 'color': inverseColor(label.color) }"></span>
-                </td>
-                <td ng-bind="issue.comments"></td>
-              </tr>
-            </table>
+            <issues source="filteredIssues"></issues>
           </div>
         </div>
         <div class="tab" ng-show="timeRange === 'diario'">
@@ -104,44 +69,7 @@
               </div>
               <div class="card-body">
                 <div class="row" ng-show="dayIssues.length > 0">
-                  <table>
-                    <tr>
-                      <th>State</th>
-                      <th>#</th>
-                      <th>User</th>
-                      <th>Title</th>
-                      <th>Assignees</th>
-                      <th>Committers</th>
-                      <th>Created At</th>
-                      <th>Assigned</th>
-                      <th>Commited</th>
-                      <th>Merged</th>
-                      <th>Closed</th>
-                      <th>Labels</th>
-                      <th>Comments</th>
-                    </tr>
-                    <tr ng-repeat="issue in dayIssues">
-                      <td ng-bind="issue.state" class="{{issue.state}}"></td>
-                      <td ng-bind="'#' + issue.number"></td>
-                      <td ng-bind="'@' + issue.user.login"></td>
-                      <td ng-bind="issue.title"></td>
-                      <td>
-                        <span class="reviewer" ng-repeat="user in issue.assignees" ng-bind="user.login"></span>
-                      </td>
-                      <td>
-                        <span class="reviewer" ng-repeat="user in issue.committer" ng-bind="user.login"></span>
-                      </td>
-                      <td ng-bind="issue.created_at"></td>
-                      <td ng-bind="issue.assigned_at"></td>
-                      <td ng-bind="issue.commited_at"></td>
-                      <td ng-bind="issue.merged_at"></td>
-                      <td ng-bind="issue.closed_at"></td>
-                      <td>
-                        <span class="label" ng-repeat="label in issue.labels" ng-bind="label.name" ng-style="{ 'background-color': '#' + label.color, 'color': inverseColor(label.color) }"></span>
-                      </td>
-                      <td ng-bind="issue.comments"></td>
-                    </tr>
-                  </table>
+                  <issues source="dayIssues"></issues>
                 </div>
               </div>
             </div>
@@ -155,44 +83,7 @@
               </div>
               <div class="card-body">
                 <div class="row" ng-show="weekIssues.length > 0">
-                  <table>
-                    <tr>
-                      <th>State</th>
-                      <th>#</th>
-                      <th>User</th>
-                      <th>Title</th>
-                      <th>Assignees</th>
-                      <th>Committers</th>
-                      <th>Created At</th>
-                      <th>Assigned</th>
-                      <th>Commited</th>
-                      <th>Merged</th>
-                      <th>Closed</th>
-                      <th>Labels</th>
-                      <th>Comments</th>
-                    </tr>
-                    <tr ng-repeat="issue in weekIssues">
-                      <td ng-bind="issue.state" class="{{issue.state}}"></td>
-                      <td ng-bind="'#' + issue.number"></td>
-                      <td ng-bind="'@' + issue.user.login"></td>
-                      <td ng-bind="issue.title"></td>
-                      <td>
-                        <span class="reviewer" ng-repeat="user in issue.assignees" ng-bind="user.login"></span>
-                      </td>
-                      <td>
-                        <span class="reviewer" ng-repeat="user in issue.committer" ng-bind="user.login"></span>
-                      </td>
-                      <td ng-bind="issue.created_at"></td>
-                      <td ng-bind="issue.assigned_at"></td>
-                      <td ng-bind="issue.commited_at"></td>
-                      <td ng-bind="issue.merged_at"></td>
-                      <td ng-bind="issue.closed_at"></td>
-                      <td>
-                        <span class="label" ng-repeat="label in issue.labels" ng-bind="label.name" ng-style="{ 'background-color': '#' + label.color, 'color': inverseColor(label.color) }"></span>
-                      </td>
-                      <td ng-bind="issue.comments"></td>
-                    </tr>
-                  </table>
+                  <issues source="weekIssues"></issues>
                 </div>
               </div>
             </div>
@@ -206,44 +97,7 @@
               </div>
               <div class="card-body">
                 <div class="row" ng-show="monthIssues.length > 0">
-                  <table>
-                    <tr>
-                      <th>State</th>
-                      <th>#</th>
-                      <th>User</th>
-                      <th>Title</th>
-                      <th>Assignees</th>
-                      <th>Committers</th>
-                      <th>Created At</th>
-                      <th>Assigned</th>
-                      <th>Commited</th>
-                      <th>Merged</th>
-                      <th>Closed</th>
-                      <th>Labels</th>
-                      <th>Comments</th>
-                    </tr>
-                    <tr ng-repeat="issue in monthIssues">
-                      <td ng-bind="issue.state" class="{{issue.state}}"></td>
-                      <td ng-bind="'#' + issue.number"></td>
-                      <td ng-bind="'@' + issue.user.login"></td>
-                      <td ng-bind="issue.title"></td>
-                      <td>
-                        <span class="reviewer" ng-repeat="user in issue.assignees" ng-bind="user.login"></span>
-                      </td>
-                      <td>
-                        <span class="reviewer" ng-repeat="user in issue.committer" ng-bind="user.login"></span>
-                      </td>
-                      <td ng-bind="issue.created_at"></td>
-                      <td ng-bind="issue.assigned_at"></td>
-                      <td ng-bind="issue.commited_at"></td>
-                      <td ng-bind="issue.merged_at"></td>
-                      <td ng-bind="issue.closed_at"></td>
-                      <td>
-                        <span class="label" ng-repeat="label in issue.labels" ng-bind="label.name" ng-style="{ 'background-color': '#' + label.color, 'color': inverseColor(label.color) }"></span>
-                      </td>
-                      <td ng-bind="issue.comments"></td>
-                    </tr>
-                  </table>
+                  <issues source="monthIssues"></issues>
                 </div>
               </div>
             </div>
