@@ -70,8 +70,13 @@ var handlers = {
 
     mergeSort(arr, function(a, b) {
       var ma, mb;
-      ma = moment(a.commit.author.date);
-      mb = moment(b.commit.author.date);
+      try {
+        ma = moment(a.commit.author.date);
+        mb = moment(b.commit.author.date);
+      } catch (e) {
+        ma = moment();
+        mb = moment();
+      }
       return ma.diff(mb) >= 0;
     });
 
@@ -88,12 +93,91 @@ var handlers = {
 
     return res;
 
+  },
+  issues: function (arr) {
+  
+    if ( arr.length === 0 ) {
+      return [];
+    }
+
+    mergeSort(arr, function(a, b) {
+      return (~~a.number) >= (~~b.number);
+    });
+
+    var res = [], pos = 0;
+
+    res.push( arr[0] );
+
+    for (var i = 1, max = arr.length; i < max; i += 1) {
+      if ( arr[i].number != res[pos].number ) {
+        res.push(arr[i]);
+        pos += 1;
+      }
+    }
+
+    return res;
+
+  },
+  pulls: function (arr) {
+    
+    if ( arr.length === 0 ) {
+      return [];
+    }
+
+    mergeSort(arr, function(a, b) {
+      return (~~a.number) >= (~~b.number);
+    });
+
+    var res = [], pos = 0;
+
+    res.push( arr[0] );
+
+    for (var i = 1, max = arr.length; i < max; i += 1) {
+      if ( arr[i].number != res[pos].number ) {
+        res.push(arr[i]);
+        pos += 1;
+      }
+    }
+
+    return res;
+
+  },
+  events: function (arr) {
+    
+    if ( arr.length === 0 ) {
+      return [];
+    }
+
+    mergeSort(arr, function(a, b) {
+      return (~~a.id) >= (~~b.id);
+    });
+
+    var res = [], pos = 0;
+
+    res.push( arr[0] );
+
+    for (var i = 1, max = arr.length; i < max; i += 1) {
+      if ( arr[i].id != res[pos].id ) {
+        res.push(arr[i]);
+        pos += 1;
+      }
+    }
+
+    return res;
+
   }
+
 };
 
-function bundle(file) {
+function bundle(dir, file) {
 
-  glob(__dirname + '/json/' + file + '*.json', function (err, data) {
+  glob(__dirname + '/' + dir + '/' + file + '*.json', function (err, data) {
+
+    if ( err ) {
+      console.error("ERROR: ", err.message);
+      return;
+    }
+
     var i = 0, max = data.length;
     var res = [];
 
@@ -102,15 +186,15 @@ function bundle(file) {
         clearInterval(itv);
         if ( handlers.hasOwnProperty(file) === true ) {
           var result = handlers[file](res);
-          fs.writeFileSync(__dirname + '/json/' + file + '_bundle.json', JSON.stringify(result));
+          fs.writeFileSync(__dirname + '/' + dir + '/' + file + '_bundle.json', JSON.stringify(result));
         } else {
-          fs.writeFileSync(__dirname + '/json/' + file + '_bundle.json', JSON.stringify(res));
+          fs.writeFileSync(__dirname + '/' + dir + '/' + file + '_bundle.json', JSON.stringify(res));
         }
         console.log('Done with ' + file + '!');
         return;
       }
 
-      if (data[i].indexOf('bundle') > -1) {
+      if (data[i].indexOf('bundle') > -1 || data[i].indexOf('stats') > -1) {
         i++;
         return;
       }
@@ -124,8 +208,12 @@ function bundle(file) {
 
 }
 
-bundle('commits');
-bundle('events');
-bundle('issues');
-bundle('reviews');
-bundle('pulls');
+var dirs = require('./repos').dirs;
+
+for (var i = 0; i < dirs.length; i += 1) {
+  bundle(dirs[i], 'commits');
+  bundle(dirs[i], 'events');
+  bundle(dirs[i], 'issues');
+  bundle(dirs[i], 'reviews');
+  bundle(dirs[i], 'pr');
+}

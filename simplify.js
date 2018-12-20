@@ -75,7 +75,12 @@ function simplifyPullRequest(file) {
     'merged_at',
     'state',
     'number',
-    'assignees',
+    {
+      assignees: [
+        'login',
+        'id'
+      ]
+    },
     {
       user: [
         'login',
@@ -302,9 +307,9 @@ function simplifyEvents(file) {
 
 }
 
-function makeSimplification(prefix, callback) {
+function makeSimplification(dir, prefix, callback) {
 
-  glob(__dirname + '/json/' + prefix + '*.json', function(err, data) {
+  glob(__dirname + '/' + dir + '/' + prefix + '*.json', function(err, data) {
     var i = 0, max = data.length;
 
     var itv = setInterval(function() {
@@ -322,8 +327,12 @@ function makeSimplification(prefix, callback) {
 
 }
 
-makeSimplification('commits', simplifyCommits);
-makeSimplification('events', simplifyEvents);
-makeSimplification('issues', simplifyIssues);
-makeSimplification('review', simplifyReviews);
-makeSimplification('pr', simplifyPullRequest);
+var dirs = require('./repos').dirs;
+
+for (var i = 0; i < dirs.length; i += 1) {
+  makeSimplification(dirs[i], 'commits', simplifyCommits);
+  makeSimplification(dirs[i], 'events', simplifyEvents);
+  makeSimplification(dirs[i], 'issues', simplifyIssues);
+  makeSimplification(dirs[i], 'review', simplifyReviews);
+  makeSimplification(dirs[i], 'pr', simplifyPullRequest);
+}

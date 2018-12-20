@@ -16,6 +16,8 @@
       </div>
       <div class="card-body">
         <div class="row text-center">
+          <input type="text" ng-model="owner" placeholder="Owner...">
+          <input type="text" ng-model="repo" placeholder="Repository...">
           <button class="btn" ng-click="generateMetrics()"> Get Info </button>
         </div>
         <div class="row tab-container">
@@ -130,7 +132,7 @@
         </div>
         <div class="tab" ng-show="selectedTab === 1">
           <div class="row">
-            <h2 ng-bind="'Statistics (skycoin/skycoin)'" class="text-center"></h2>
+            <h2 ng-bind="'Statistics (' + owner + '/' + repo + ')'" class="text-center"></h2>
             <table>
               <tr>
                 <th>Summarize by</th>
@@ -234,10 +236,11 @@
     </div>
 
   </body>
-  <script type="text/javascript" src="js/Chart.min.js"></script>
+  <script type="text/javascript" src="js/randomColor.min.js"></script>
+  <script type="text/javascript" src="js/Chart.bundle.min.js"></script>
   <script type="text/javascript" src="js/moment-with-locales.min.js"></script>
   <script type="text/javascript" src="js/olap-cube.min.js"></script>
   <script type="text/javascript" src="js/angularjs-1.4.8.js"></script>
   <script type="text/javascript" src="js/ui.js"></script>
-  <script type="text/javascript" src="js/main.js"></script>
+  <script type="text/javascript" src="js/main.bundle.js"></script>
 </html>

@@ -154,7 +154,7 @@ function getInfo(url, descriptor, file, number, callback, accept) {
     if ( url.indexOf('?') === -1 ) {
       url = url + '?' + authHeader;
     } else {
-      url = url + authHeader;
+      url = url + '&' + authHeader;
     }
   }
 
@@ -215,15 +215,15 @@ function getNextPage(data, url, descriptor, file) {
 
 }
 
-getInfo(contrib, 'Contributions', 'contribs');
-getInfo(activity, 'Commit Activity', 'commit_activity');
-getInfo(particip, 'Participation', 'participation');
-getInfo(commph, 'Commits per hour', 'punch_card');
+//getInfo(contrib, 'Contributions', 'contribs');
+//getInfo(activity, 'Commit Activity', 'commit_activity');
+//getInfo(particip, 'Participation', 'participation');
+//getInfo(commph, 'Commits per hour', 'punch_card');
 getInfo(events, 'Issue Events', 'events', '', getNextPage);
 getInfo(issues, 'Issues', 'issues', '', getNextPage);
 getInfo(pullReq, 'Pull Requests', 'pr', '', function(data) {
   getReviews(data);
-  //console.log(data);
+  // console.log(data);
   getNextPage.apply(null, arguments);
 });
 getInfo(commits, 'Commits', 'commits', '', getNextPage);
