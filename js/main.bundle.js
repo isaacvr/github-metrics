@@ -519,6 +519,9 @@ process.umask = function() { return 0; };
       $scope.owner = 'simelo';
       $scope.repo = 'skycoin';
 
+      $scope.owner1 = 'skycoin';
+      $scope.repo1 = 'skycoin';
+
       $scope.selectedTab = 0;
       $scope.totalTabs = 2;
 
@@ -1072,10 +1075,28 @@ process.umask = function() { return 0; };
 
       };
 
+      // Returns true if a <= c && c <= b
+      $scope.isInside = function isInside(a, b, c) {
+
+        var a_y = ~~a.format('YYYY'), a_m = ~~a.format('MM'), a_d = ~~a.format('DD');
+        var b_y = ~~b.format('YYYY'), b_m = ~~b.format('MM'), b_d = ~~b.format('DD');
+        var c_y = ~~c.format('YYYY'), c_m = ~~c.format('MM'), c_d = ~~c.format('DD');
+      
+        var da = moment(a_d + '/' + a_m + '/' + a_y, $scope.DATE_FORMAT);
+        var db = moment(b_d + '/' + b_m + '/' + b_y, $scope.DATE_FORMAT);
+        var dc = moment(c_d + '/' + c_m + '/' + c_y, $scope.DATE_FORMAT);
+
+        var _da = dc.diff(da);
+        var _db = dc.diff(db);
+
+        return Math.sign(_da) * Math.sign(_db) <= 0;
+
+      };
+
       $scope.getSummary = function getSummary() {
 
         var code1 = $scope.owner + '_' + $scope.repo,
-          code2 = 'skycoin_skycoin';
+          code2 = $scope.owner1 + '_' + $scope.repo1;
 
         var tables = [
           $scope['commitsTable' + code1],
@@ -1131,9 +1152,7 @@ process.umask = function() { return 0; };
               var b = moment(summary.finalDay, $scope.DATE_FORMAT);
               var c = moment(item[7]);
               if (a.isValid() === true && b.isValid() === true) {
-                var da = c.diff(a);
-                var db = c.diff(b);
-                return Math.sign(da) * Math.sign(db) <= 0;
+                return $scope.isInside(a, b, c);
               }
               return false;
             }
@@ -1229,60 +1248,62 @@ process.umask = function() { return 0; };
 
         }
 
-        for (var i = 0; i < tables1.length; i += 1) {
+        if ( !!$scope.vsRepo ) {
+          for (var i = 0; i < tables1.length; i += 1) {
 
-          if (summary.showGraphics[i] === false) {
-            continue;
-          }
+            if (summary.showGraphics[i] === false) {
+              continue;
+            }
 
-          if (tables1[i].dimensions.indexOf(summary.dimension) === -1) {
-            continue;
-          }
+            if (tables1[i].dimensions.indexOf(summary.dimension) === -1) {
+              continue;
+            }
 
-          rows = tables1[i]
-            .dice(__filter)
-            .rollup(summary.dimension, ['year'], customAdder, [0])
-            .rows
-            .filter(function (e) {
-              return e[0] != '';
-            });
+            rows = tables1[i]
+              .dice(__filter)
+              .rollup(summary.dimension, ['year'], customAdder, [0])
+              .rows
+              .filter(function (e) {
+                return e[0] != '';
+              });
 
-          if (summary.dimension === 'day') {
-            $scope.mergeSort(rows, function (a, b) {
-              return $scope.DAYS.indexOf(a[0]) <= $scope.DAYS.indexOf(b[0]);
-            });
-          } else if (summary.dimension === 'month') {
-            $scope.mergeSort(rows, function (a, b) {
-              return $scope.MONTHS.indexOf(a[0]) <= $scope.MONTHS.indexOf(b[0]);
-            });
-          } else if (summary.dimension === 'year' || summary.dimension === 'hour') {
-            $scope.mergeSort(rows, function (a, b) {
-              return (~~a[0]) <= (~~b[0]);
-            });
-          }
+            if (summary.dimension === 'day') {
+              $scope.mergeSort(rows, function (a, b) {
+                return $scope.DAYS.indexOf(a[0]) <= $scope.DAYS.indexOf(b[0]);
+              });
+            } else if (summary.dimension === 'month') {
+              $scope.mergeSort(rows, function (a, b) {
+                return $scope.MONTHS.indexOf(a[0]) <= $scope.MONTHS.indexOf(b[0]);
+              });
+            } else if (summary.dimension === 'year' || summary.dimension === 'hour') {
+              $scope.mergeSort(rows, function (a, b) {
+                return (~~a[0]) <= (~~b[0]);
+              });
+            }
 
-          for (var j = 0, max = rows.length; j < max; j += 1) {
-            fnd = false;
-            for (var k = 0, max1 = dict.length; k < max1; k += 1) {
-              if (rows[j][0] === dict[k][0]) {
-                fnd = true;
-                if (dict[k][i + 1]) {
-                  dict[k][i + 1][1] = rows[j][1];
-                } else {
-                  dict[k][i + 1] = [ 0, rows[j][1]];
+            for (var j = 0, max = rows.length; j < max; j += 1) {
+              fnd = false;
+              for (var k = 0, max1 = dict.length; k < max1; k += 1) {
+                if (rows[j][0] === dict[k][0]) {
+                  fnd = true;
+                  if (dict[k][i + 1]) {
+                    dict[k][i + 1][1] = rows[j][1];
+                  } else {
+                    dict[k][i + 1] = [ 0, rows[j][1]];
+                  }
+                  break;
                 }
-                break;
+              }
+              if (fnd === false) {
+                dict.push([rows[j][0]]);
+                dict[dict.length - 1][i + 1] = [0, rows[j][1]];
               }
             }
-            if (fnd === false) {
-              dict.push([rows[j][0]]);
-              dict[dict.length - 1][i + 1] = [0, rows[j][1]];
-            }
-          }
 
-        }//*/
+          }//*/
+        }
 
-        console.log('DICT: ', dict);
+        //console.log('DICT: ', dict);
 
         var dim = dict.map(function (e) { return (['authorName', 'assignee'].indexOf(summary.dimension) > -1 ? '@' : '') + e[0]; });
         var dim1 = [];
@@ -1296,14 +1317,18 @@ process.umask = function() { return 0; };
           });
         });
 
-        var values_r2 = tables.map(function (e, idx) {
-          return dict.map(function (e1) {
-            if ( e1[ idx + 1 ] ) {
-              return ~~e1[idx + 1][1];
-            }
-            return 0;
+        var values_r2;
+        
+        if ( !!$scope.vsRepo ) {
+          values_r2 = tables.map(function (e, idx) {
+            return dict.map(function (e1) {
+              if ( e1[ idx + 1 ] ) {
+                return ~~e1[idx + 1][1];
+              }
+              return 0;
+            });
           });
-        });
+        }
 
         var values1_r1 = tables.map(function () { return []; });
         var values1_r2 = tables.map(function () { return []; });
@@ -1321,9 +1346,11 @@ process.umask = function() { return 0; };
             values_r1[i] = values_r1[i].slice(0, len);
           }
 
-          for (var i = 0; i < values_r2.length; i += 1) {
-            values1_r2[i] = values_r2[i].slice(len, values_r2[i].length);
-            values_r2[i] = values_r2[i].slice(0, len);
+          if ( !!$scope.vsRepo ) {
+            for (var i = 0; i < values_r2.length; i += 1) {
+              values1_r2[i] = values_r2[i].slice(len, values_r2[i].length);
+              values_r2[i] = values_r2[i].slice(0, len);
+            }
           }
 
           summary.olap2 = true;
@@ -1335,44 +1362,61 @@ process.umask = function() { return 0; };
 
         var datasets = [];
         var datasets1 = [];
+        var label;
 
         for (var i = 0; i < tables.length; i += 1) {
           if (summary.showGraphics[i] === true) {
-            
-            datasets.push({
-              label: labels[i] + ' (skycoin/skycoin)',
-              backgroundColor: randomColor({ luminosity: 'dark' }),
-              data: values_r2[i],
-              fill: false
-            });//*/
+
+            if ( !!$scope.vsRepo ) {              
+              
+              datasets.push({
+                label: labels[i] + ' (' + $scope.owner1 + '/' + $scope.repo1 + ')',
+                backgroundColor: randomColor({ luminosity: 'dark' }),
+                data: values_r2[i],
+                fill: false
+              });//*/
+
+              label = labels[i] + ' (' + $scope.owner + '/' + $scope.repo + ')'; 
+
+            } else {
+              label = labels[i];
+            }
 
             datasets.push({
-              label: labels[i] + ' (' + $scope.owner + '/' + $scope.repo + ')',
+              label: label,
               backgroundColor: randomColor({ luminosity: 'dark' }),
               data: values_r1[i].map(function(e, idx) {
-                if ( i > 0 ) {
+                if ( i > 0 && !!$scope.vsRepo) {
                   return 0;
                 }
-                return e - values_r2[i][idx];
+                if ( !!$scope.vsRepo ) {
+                  return e - values_r2[i][idx];
+                }
+                return e;
               }),
               fill: false
             });//*/
 
-            datasets1.push({
-              label: labels[i] + ' (skycoin/skycoin)',
-              backgroundColor: randomColor({ luminosity: 'dark' }),
-              data: values1_r2[i],
-              fill: false
-            });//*/
+            if ( !!$scope.vsRepo ) {
+              datasets1.push({
+                label: labels[i] + ' (' + $scope.owner1 + '/' + $scope.repo1 + ')',
+                backgroundColor: randomColor({ luminosity: 'dark' }),
+                data: values1_r2[i],
+                fill: false
+              });//*/
+            }
 
             datasets1.push({
-              label: labels[i] + ' (' + $scope.owner + '/' + $scope.repo + ')',
+              label: label,
               backgroundColor: randomColor({ luminosity: 'dark' }),
               data: values1_r1[i].map(function(e, idx) {
-                if ( i > 0 ) {
+                if ( i > 0 && !!$scope.vsRepo) {
                   return 0;
                 }
-                return e - values1_r2[i][idx];
+                if ( !!$scope.vsRepo ) {
+                  return e - values1_r2[i][idx];
+                }
+                return e;
               }),
               fill: false
             });//*/
@@ -1389,6 +1433,12 @@ process.umask = function() { return 0; };
           labels: dim1,
           datasets: datasets1
         };
+
+        $scope.charts.olap1.options.scales.xAxes[0].stacked = !!$scope.vsRepo;
+        $scope.charts.olap1.options.scales.yAxes[0].stacked = !!$scope.vsRepo;
+
+        $scope.charts.olap2.options.scales.xAxes[0].stacked = !!$scope.vsRepo;
+        $scope.charts.olap2.options.scales.yAxes[0].stacked = !!$scope.vsRepo;
 
         $scope.charts.olap1.update();
         $scope.charts.olap2.update();

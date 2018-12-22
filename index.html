@@ -19,6 +19,12 @@
           <input type="text" ng-model="owner" placeholder="Owner...">
           <input type="text" ng-model="repo" placeholder="Repository...">
           <button class="btn" ng-click="generateMetrics()"> Get Info </button>
+          <div>
+            <input type="checkbox" ng-model="vsRepo" id="">
+            <span> VS </span>
+          </div>
+          <input type="text" ng-model="owner1" placeholder="Owner..." ng-disabled="!vsRepo">
+          <input type="text" ng-model="repo1" placeholder="Repository..." ng-disabled="!vsRepo">
         </div>
         <div class="row tab-container">
           <div class="tab-selector" ng-click="selectTab(0)" ng-class="{ 'selected-tab': selectedTab === 0 }">

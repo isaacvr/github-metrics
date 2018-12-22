@@ -23,32 +23,50 @@ commander
   .option('-o, --owner [owner]', 'Specify the owner of the repository')
   .option('-r, --repo [repo]', 'Specify the name of the repository')
   .option('-p, --proxy [proxy]', 'Connect through proxy http://user:pass@host:port')
+  .option('-f, --file', 'Get the basic data from a file')
   .parse(process.argv);
 
-//console.log(commander);
+var owner;
+var repo;
+var since;
+var MAX_PAGE;
+var filedata;
+var paramsContainer;
 
-if ( commander.hasOwnProperty('owner') === false ) {
+if ( commander.hasOwnProperty('file') === true ) {
+
+  try {
+    var filedata = require('./metricsSettings');
+    paramsContainer = filedata;
+  } catch(e) {
+    console.log(chalk.red('Error opening the file'));
+    process.exit(0);
+  }
+
+} else {
+  paramsContainer = commander;
+}
+
+if ( paramsContainer.hasOwnProperty('owner') === false ) {
   console.log(chalk.red('Missing parameter "owner"'));
   process.exit(0);
 }
 
-if ( commander.hasOwnProperty('repo') === false ) {
+if ( paramsContainer.hasOwnProperty('repo') === false ) {
   console.log(chalk.red('Missing parameter "repo"'));
   process.exit(0);
 }
 
-if ( commander.hasOwnProperty('proxy') === true ) {
+if ( paramsContainer.hasOwnProperty('proxy') === true ) {
   request = request.defaults({
-    proxy: commander.proxy
+    proxy: paramsContainer.proxy
   });
 }
 
-var owner = commander.owner;
-var repo  = commander.repo;
-var since = '2018-01-01T00:00:00Z';
-var initDay = moment('1/11/2018', 'DD/MM/YYYY');
-var finDay = moment('30/11/2018', 'DD/MM/YYYY');
-var MAX_PAGE = 30;
+owner = paramsContainer.owner;
+repo  = paramsContainer.repo;
+since = paramsContainer.since || '2018-01-01T00:00:00Z';
+MAX_PAGE = paramsContainer.maxPage || 30;
 
 /// Constants
 var ISSUES_TMPL   = 'http://api.github.com/repos/:owner/:repo/issues?state=all&page=:page&per_page=100&since=' + since;
