@@ -6,6 +6,7 @@
 
 var fs = require('fs');
 var moment = require('moment');
+var path = require('path');
 
 /// Constants
 var DATE_FORMAT = 'DD/MM/YYYY';
@@ -32,9 +33,6 @@ var generate = function generate(BASE_DIR) {
     },
     cm: 0
   };
-
-  /// Temporal storage
-  var pullRequests = {};
 
   /// Utils
   function purge(obj) {
@@ -232,7 +230,7 @@ var generate = function generate(BASE_DIR) {
 
     for (i = 0; i < len; i += 1) {
 
-      pullRequests[data[i].number] = moment(data[i].created_at);
+      //pullRequests[data[i].number] = moment(data[i].created_at);
       addReferences(data[i].title);
       stats.pr.all += 1;
       stats.pr[data[i].state] += 1;
@@ -245,6 +243,7 @@ var generate = function generate(BASE_DIR) {
           data[i][j + '_moment'] = model[j](data[i][j]);
 
           if (data[i][j]) {
+            data[i][j + '_moment'].utcOffset(0);
             data[i][j] = data[i][j + '_moment'].format(DATE_FORMAT);
           } else {
             data[i][j] = '--';
@@ -360,6 +359,7 @@ var generate = function generate(BASE_DIR) {
           data[i][j + '_moment'] = model[j](data[i][j]);
 
           if (data[i][j]) {
+            data[i][j + '_moment'].utcOffset(0);
             data[i][j] = data[i][j + '_moment'].format(DATE_FORMAT);
           } else {
             data[i][j] = '--';
@@ -634,7 +634,7 @@ var generate = function generate(BASE_DIR) {
       stats: stats
     };
 
-    var file = BASE_DIR + '/all_stats.json';
+    var file = path.join(BASE_DIR, '/all_stats.json');
 
     fs.writeFileSync(file, JSON.stringify(res));
 

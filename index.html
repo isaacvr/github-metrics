@@ -8,7 +8,7 @@
 </head>
   <body ng-app="metricsGenerator" ng-controller="metricsController">
 
-    <div class="scroll-top" ng-click="scrollTop()"></div>
+    <!--div class="scroll-top" ng-click="scrollTop()"></div-->
 
     <div class="card">
       <div class="card-header">
@@ -20,8 +20,10 @@
           <input type="text" ng-model="repo" placeholder="Repository...">
           <button class="btn" ng-click="generateMetrics()"> Get Info </button>
           <div>
-            <input type="checkbox" ng-model="vsRepo" id="">
-            <span> VS </span>
+            <label for="vsRepo">
+              <input type="checkbox" ng-model="vsRepo" id="vsRepo">
+                VS
+            </label>
           </div>
           <input type="text" ng-model="owner1" placeholder="Owner..." ng-disabled="!vsRepo">
           <input type="text" ng-model="repo1" placeholder="Repository..." ng-disabled="!vsRepo">
@@ -147,40 +149,56 @@
               <tr>
                 <td>
                   <div class="radio-item">
-                    <input type="radio" name="summarize" ng-model="summary.dimension" value="authorName" checked>
-                    <span>Author</span>
+                    <label for="authorName">
+                      <input type="radio" id="authorName" name="summarize" ng-model="summary.dimension" value="authorName" checked>
+                      Author
+                    </label>
                   </div>
                   <div class="radio-item">
-                    <input type="radio" name="summarize" ng-model="summary.dimension" value="assignee" checked>
-                    <span>Assignee</span>
+                    <label for="assignee">
+                      <input type="radio" id="assignee" name="summarize" ng-model="summary.dimension" value="assignee" checked>
+                      Assignee
+                    </label>
                   </div>
                   <div class="radio-item">
-                    <input type="radio" name="summarize" ng-model="summary.dimension" value="closer" checked>
-                    <span>Closer</span>
+                    <label for="closer">
+                      <input type="radio" id="closer" name="summarize" ng-model="summary.dimension" value="closer" checked>
+                      Closer
+                    </label>
                   </div>
                   <div class="radio-item">
-                    <input type="radio" name="summarize" ng-model="summary.dimension" value="hour">
-                    <span>Hour</span>
+                    <label for="hour">
+                      <input type="radio" id="hour" name="summarize" ng-model="summary.dimension" value="hour">
+                      Hour
+                    </label>
                   </div>
                   <div class="radio-item">
-                    <input type="radio" name="summarize" ng-model="summary.dimension" value="day">
-                    <span>Day</span>
+                    <label for="day">
+                      <input type="radio" id="day" name="summarize" ng-model="summary.dimension" value="day">
+                      Day
+                    </label>
                   </div>
                   <div class="radio-item">
-                    <input type="radio" name="summarize" ng-model="summary.dimension" value="month">
-                    <span>Month</span>
+                    <label for="month">
+                      <input type="radio" id="month" name="summarize" ng-model="summary.dimension" value="month">
+                      Month
+                    </label>
                   </div>
                   <div class="radio-item">
-                    <input type="radio" name="summarize" ng-model="summary.dimension" value="year">
-                    <span>Year</span>
+                    <label for="year">
+                      <input type="radio" id="year" name="summarize" ng-model="summary.dimension" value="year">
+                      Year
+                    </label>
                   </div>
                 </td>
                 <td>
                   <table>
                     <tr>
                       <td class="text-left">
-                        <input type="checkbox" name="filterByName" ng-model="summary.filterByName">
-                        <span>User</span>
+                        <label for="filterByName">
+                          <input type="checkbox" id="filterByName" name="filterByName" ng-model="summary.filterByName">
+                          User
+                        </label>
                       </td>
                       <td>
                         <input type="text" class="p95" placeholder="Username..." ng-model="summary.userFilter" ng-disabled="!summary.filterByName">
@@ -188,8 +206,10 @@
                     </tr>
                     <tr>
                       <td class="text-left">
-                        <input type="checkbox" name="filterByRange" ng-model="summary.filterByRange">
-                        <span>Date Range</span>
+                        <label for="filterByRange">
+                          <input type="checkbox" id="filterByRange" name="filterByRange" ng-model="summary.filterByRange">
+                          Date Range
+                        </label>
                       </td>
                       <td>
                         <input type="text" placeholder="dd/mm/yyyy" ng-model="summary.initialDay" ng-disabled="!summary.filterByRange">
@@ -199,8 +219,10 @@
                     </tr>
                     <tr>
                       <td class="text-left">
-                        <input type="checkbox" name="filterByState" ng-model="summary.filterByState">
-                        <span>State</span>
+                        <label for="filterByState">
+                          <input type="checkbox" id="filterByState" name="filterByState" ng-model="summary.filterByState">
+                          State
+                        </label>
                       </td>
                       <td>
                         <input type="text" placeholder="State [open, closed]..." ng-model="summary.state" ng-disabled="!summary.filterByState">
@@ -208,8 +230,10 @@
                     </tr>
                     <tr>
                       <td class="text-left">
-                        <input type="checkbox" name="filterByAssignee" ng-model="summary.filterByAssignee">
-                        <span>Assigned to...</span>
+                        <label for="filterByAssignee">
+                          <input type="checkbox" id="filterByAssignee" name="filterByAssignee" ng-model="summary.filterByAssignee">
+                          Assigned to...
+                        </label>
                       </td>
                       <td>
                         <input type="text" placeholder="Assigned to..." ng-model="summary.assignee" ng-disabled="!summary.filterByAssignee">
@@ -221,21 +245,36 @@
             </table>
             <ul>
               <li>
-                <input type="checkbox" name="showCommits" ng-model="summary.showGraphics[0]">
-                <span>Commits</span>
+                <label for="showCommits">
+                  <input type="checkbox" id="showCommits" name="showCommits" ng-model="summary.showGraphics[1]">
+                  Commits
+                </label>
               </li>
               <li>
-                <input type="checkbox" name="showCommits" ng-model="summary.showGraphics[1]">
-                <span>Pulls</span>
+                <label for="showPulls">
+                  <input type="checkbox" id="showPulls" name="showCommits" ng-model="summary.showGraphics[2]">
+                  Pulls
+                </label>
               </li>
               <li>
-                <input type="checkbox" name="showCommits" ng-model="summary.showGraphics[2]">
-                <span>Issues</span>
+                <label for="showIssues">
+                  <input type="checkbox" id="showIssues" name="showCommits" ng-model="summary.showGraphics[3]">
+                  Issues
+                </label>
               </li>
             </ul>
             <button class="btn" ng-click="getSummary()">Summarize</button>
             <canvas id="olap1" ng-show="summary.olap1"></canvas>
             <canvas id="olap2" ng-show="summary.olap2"></canvas>
+            <table>
+              <tr>
+                <th>User</th>
+                <th ng-repeat="(index, label) in labels" ng-bind="label" ng-show="summary.showGraphics[index + 1]"></th>
+              </tr>
+              <tr ng-repeat="dic in dict">
+                <td ng-repeat="(index, d) in dic track by index" ng-show="summary.showGraphics[index]" ng-bind="index==0?d:(d[0] + (vsRepo?' / ' + d[1]:''))"></td>
+              </tr>
+            </table>
             </div>
         </div>
       </div>

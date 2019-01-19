@@ -3,3 +3,4 @@
 /json*
 auth.js
 repos.js
+runserver*

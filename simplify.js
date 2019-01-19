@@ -103,23 +103,30 @@ function simplifyPullRequest(file) {
   var obj;
 
   try {
-    obj = JSON.parse(fs.readFileSync(file, 'utf8'));
-    //console.log(obj[0]);
-    obj = JSON.stringify(simplify(obj, fields));
+    
+    var strData = fs.readFileSync(file, 'utf8');
 
-    fs.writeFile(file, obj, function(err) {
+    if ( strData.trim() != '' ) {
 
-      if ( err ) {
-        console.log('ERROR: ', err.message);
-        return;
-      }
+      obj = JSON.parse(strData);
+      //console.log(obj[0]);
+      obj = JSON.stringify(simplify(obj, fields));
 
-      console.log('Saved: ', file);
+      fs.writeFile(file, obj, function(err) {
 
-    });
+        if ( err ) {
+          console.log('ERROR: ', err.message);
+          return;
+        }
+
+        console.log('Saved: ', file);
+
+      });
+    }
     //console.log('-----------------------------------------------------');
     //console.log(obj[0]);
   } catch(e) {
+    console.log('ERROR: ', file);
     console.log(e.constructor.name + ':', e.message);
   }
 
@@ -152,23 +159,30 @@ function simplifyIssues(file) {
   var obj;
 
   try {
-    obj = JSON.parse(fs.readFileSync(file, 'utf8'));
-    //console.log(obj[0]);
-    obj = JSON.stringify(simplify(obj, fields));
+    var strData = fs.readFileSync(file, 'utf8');
 
-    fs.writeFile(file, obj, function(err) {
+    if ( strData.trim() != '' ) {
 
-      if ( err ) {
-        console.log('ERROR: ', err.message);
-        return;
-      }
+      obj = JSON.parse(strData);
+      //console.log(obj[0]);
+      obj = JSON.stringify(simplify(obj, fields));
 
-      console.log('Saved: ', file);
+      fs.writeFile(file, obj, function(err) {
 
-    });
+        if ( err ) {
+          console.log('ERROR: ', err.message);
+          return;
+        }
+
+        console.log('Saved: ', file);
+
+      });
+
+    }
     //console.log('-----------------------------------------------------');
     //console.log(obj[0]);
   } catch(e) {
+    console.log('ERROR: ', file);
     console.log(e.constructor.name + ':', e.message);
   }
 
@@ -202,23 +216,29 @@ function simplifyCommits(file) {
   var obj;
 
   try {
-    obj = JSON.parse(fs.readFileSync(file, 'utf8'));
-    //console.log(obj[0]);
-    obj = JSON.stringify(simplify(obj, fields));
+    var strData = fs.readFileSync(file, 'utf8');
 
-    fs.writeFile(file, obj, function(err) {
+    if ( strData.trim() != '' ) {
 
-      if ( err ) {
-        console.log('ERROR: ', err.message);
-        return;
-      }
+      obj = JSON.parse(strData);
+      //console.log(obj[0]);
+      obj = JSON.stringify(simplify(obj, fields));
 
-      console.log('Saved: ', file);
+      fs.writeFile(file, obj, function(err) {
 
-    });
+        if ( err ) {
+          console.log('ERROR: ', err.message);
+          return;
+        }
+
+        console.log('Saved: ', file);
+
+      });
+    }
     //console.log('-----------------------------------------------------');
     //console.log(obj[0]);
   } catch(e) {
+    console.log('ERROR: ', file);
     console.log(e.constructor.name + ':', e.message);
   }
 
@@ -241,23 +261,31 @@ function simplifyReviews(file) {
   var obj;
 
   try {
-    obj = JSON.parse(fs.readFileSync(file, 'utf8'));
-    //console.log(obj[0]);
-    obj = JSON.stringify(simplify(obj, fields));
 
-    fs.writeFile(file, obj, function(err) {
+    var strData = fs.readFileSync(file, 'utf8');
 
-      if ( err ) {
-        console.log('ERROR: ', err.message);
-        return;
-      }
+    if ( strData.trim() != '' ) {
 
-      console.log('Saved: ', file);
+      obj = JSON.parse(strData);
+      //console.log(obj[0]);
+      obj = JSON.stringify(simplify(obj, fields));
 
-    });
+      fs.writeFile(file, obj, function(err) {
+
+        if ( err ) {
+          console.log('ERROR: ', err.message);
+          return;
+        }
+
+        console.log('Saved: ', file);
+
+      });
+      
+    }
     //console.log('-----------------------------------------------------');
     //console.log(obj[0]);
   } catch(e) {
+    console.log('ERROR: ', file);
     console.log(e.constructor.name + ':', e.message);
   }
 
@@ -285,23 +313,29 @@ function simplifyEvents(file) {
   var obj;
 
   try {
-    obj = JSON.parse(fs.readFileSync(file, 'utf8'));
-    //console.log(obj[0]);
-    obj = JSON.stringify(simplify(obj, fields));
+    var strData = fs.readFileSync(file, 'utf8');
 
-    fs.writeFile(file, obj, function(err) {
+    if ( strData.trim() != '' ) {
 
-      if ( err ) {
-        console.log('ERROR: ', err.message);
-        return;
-      }
+      obj = JSON.parse(strData);
+      //console.log(obj[0]);
+      obj = JSON.stringify(simplify(obj, fields));
 
-      console.log('Saved: ', file);
+      fs.writeFile(file, obj, function(err) {
 
-    });
+        if ( err ) {
+          console.log('ERROR: ', err.message);
+          return;
+        }
+
+        console.log('Saved: ', file);
+
+      });
+    }
     //console.log('-----------------------------------------------------');
     //console.log(obj[0]);
   } catch(e) {
+    console.log('ERROR: ', file);
     console.log(e.constructor.name + ':', e.message);
   }
 

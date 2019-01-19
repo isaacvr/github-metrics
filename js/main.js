@@ -24,10 +24,10 @@
       $scope.IS_STATES = ['all', 'open', 'closed'];
       $scope.selectedMonth = moment('2000-01-00T00:00:00Z').format('MMMM');
       $scope.owner = 'simelo';
-      $scope.repo = 'skycoin';
+      $scope.repo = 'libskycoin-dotnet';
 
       $scope.owner1 = 'skycoin';
-      $scope.repo1 = 'skycoin';
+      $scope.repo1 = $scope.repo;
 
       $scope.selectedTab = 0;
       $scope.totalTabs = 2;
@@ -35,11 +35,14 @@
       $scope.summary = {
         olap1: false,
         olap2: false,
-        filterByName: false,
-        filterByRange: false,
+        initialDay: '1/12/2018',
+        finalDay: '31/12/2018',
+        userFilter: 'olemis, stdev*',
+        filterByName: true,
+        filterByRange: true,
         filterByState: false,
         dimension: 'authorName',
-        showGraphics: [true, true, true]
+        showGraphics: [ true, true, true, true]
       };
 
       $scope.doc = document;
@@ -91,10 +94,7 @@
         $scope.contribs = {};
         $scope.selectedWeek = {};
         $scope.commitsPerMonth = {};
-        $scope.commitsTable = {};
-        $scope.issuesTable = {};
-        $scope.pullRequestsTable = {};
-
+        
         $scope.createOrEmpty('users');
         $scope.createOrEmpty('commits');
         $scope.createOrEmpty('issues');
@@ -431,7 +431,7 @@
 
         var i, len = commits.length;
         var points = [];
-        var data = [];
+        var data = [], mdata;
 
         for (i = 0; i < len; i += 1) {
 
@@ -450,14 +450,17 @@
             obj.authorId = commits[i].author.id;
           }
 
+          mdata = moment(obj.date);
+          mdata.utcOffset(0);
+
           points.push([
             obj.authorName,
             obj.authorId,
-            moment(obj.date).format('dddd'),
-            moment(obj.date).format('MMMM'),
-            moment(obj.date).format('YYYY'),
-            moment(obj.date).format('HH'),
-            moment(obj.date).format('mm'),
+            mdata.format('dddd'),
+            mdata.format('MMMM'),
+            mdata.format('YYYY'),
+            mdata.format('HH'),
+            mdata.format('mm'),
             obj.date
           ]);
 
@@ -482,7 +485,7 @@
 
         var i, len = pulls.length;
         var points = [];
-        var data = [];
+        var data = [], mdata;
 
         for (i = 0; i < len; i += 1) {
 
@@ -494,14 +497,17 @@
             labels: pulls[i].labels
           };
 
+          mdata = moment(obj.date);
+          mdata.utcOffset(0);
+
           points.push([
             obj.authorName,
             obj.state,
-            moment(obj.date).format('dddd'),
-            moment(obj.date).format('MMMM'),
-            moment(obj.date).format('YYYY'),
-            moment(obj.date).format('HH'),
-            moment(obj.date).format('mm'),
+            mdata.format('dddd'),
+            mdata.format('MMMM'),
+            mdata.format('YYYY'),
+            mdata.format('HH'),
+            mdata.format('mm'),
             obj.date
           ]);
 
@@ -522,7 +528,7 @@
       $scope.createIssueCube = function createIssueCube(issues, code) {
         var i, len = issues.length;
         var points = [];
-        var data = [];
+        var data = [], mdata;
 
         for (i = 0; i < len; i += 1) {
 
@@ -533,16 +539,20 @@
             date: issues[i].created_at_first,
             labels: issues[i].labels
           };
+          
+          mdata = moment(obj.date);
+          mdata.utcOffset(0);
 
-          if (issues[i].assignees.length === 0) {
+          if (issues[i].assignees.length === 0) {  
+
             points.push([
               obj.authorName,
               obj.state,
-              moment(obj.date).format('dddd'),
-              moment(obj.date).format('MMMM'),
-              moment(obj.date).format('YYYY'),
-              moment(obj.date).format('HH'),
-              moment(obj.date).format('mm'),
+              mdata.format('dddd'),
+              mdata.format('MMMM'),
+              mdata.format('YYYY'),
+              mdata.format('HH'),
+              mdata.format('mm'),
               obj.date,
               '',
               issues[i].closed_by || ''
@@ -554,14 +564,15 @@
           }
 
           for (var j = 0; j < issues[i].assignees.length; j += 1) {
+
             points.push([
-              obj.authorName,
+              (j === 0) ? obj.authorName : '',
               obj.state,
-              moment(obj.date).format('dddd'),
-              moment(obj.date).format('MMMM'),
-              moment(obj.date).format('YYYY'),
-              moment(obj.date).format('HH'),
-              moment(obj.date).format('mm'),
+              mdata.format('dddd'),
+              mdata.format('MMMM'),
+              mdata.format('YYYY'),
+              mdata.format('HH'),
+              mdata.format('mm'),
               obj.date,
               issues[i].assignees[j].login,
               issues[i].closed_by || ''
@@ -592,6 +603,10 @@
         var da = moment(a_d + '/' + a_m + '/' + a_y, $scope.DATE_FORMAT);
         var db = moment(b_d + '/' + b_m + '/' + b_y, $scope.DATE_FORMAT);
         var dc = moment(c_d + '/' + c_m + '/' + c_y, $scope.DATE_FORMAT);
+
+        da.utcOffset(0);
+        db.utcOffset(0);
+        dc.utcOffset(0);
 
         var _da = dc.diff(da);
         var _db = dc.diff(db);
@@ -640,12 +655,27 @@
 
         var filters = [
           function filterByName(item) {
+            var name = item[0];
+
+            if (summary.dimension === 'closer') {
+              if (item.length < 10) {
+                return false;
+              }
+              name = item[9];
+            }
+            
             if (summary.filterByName === true) {
+              //console.log('Filtered by Name');
+              if ( item.length > 8 ) {
+                if ( name == '' ) {
+                  return false;
+                }
+              }
               if (user.length > 0) {
                 var res = false;
 
                 for (var i = 0; i < user.length && res === false; i += 1) {
-                  res = res || minimatch(item[0], user[i]);
+                  res = res || minimatch(name, user[i]);
                 }
 
                 return res;
@@ -655,24 +685,27 @@
           },
           function filterByRange(item) {
             if (summary.filterByRange === true) {
+              //console.log('Filtered by Range');
               var a = moment(summary.initialDay, $scope.DATE_FORMAT);
               var b = moment(summary.finalDay, $scope.DATE_FORMAT);
               var c = moment(item[7]);
-              if (a.isValid() === true && b.isValid() === true) {
+              if (a.isValid() === true && b.isValid() === true && c.isValid() === true) {
                 return $scope.isInside(a, b, c);
               }
               return false;
             }
             return true;
           },
-          function filterByRange(item) {
+          function filterByState(item) {
             if (summary.filterByState === true) {
+              //console.log('Filtered by State');
               return summary.state === item[1];
             }
             return true;
           },
           function filterByAssignees(item) {
             if (summary.filterByAssignee === true) {
+              //console.log('Filtered by Assignee');
               if (item.length >= 9) {
                 return item[8].split(',').indexOf(summary.assignee) > -1;
               }
@@ -704,7 +737,7 @@
 
         for (var i = 0; i < tables.length; i += 1) {
 
-          if (summary.showGraphics[i] === false) {
+          if (summary.showGraphics[i + 1] === false) {
             continue;
           }
 
@@ -758,7 +791,7 @@
         if ( !!$scope.vsRepo ) {
           for (var i = 0; i < tables1.length; i += 1) {
 
-            if (summary.showGraphics[i] === false) {
+            if (summary.showGraphics[i + 1] === false) {
               continue;
             }
 
@@ -810,7 +843,27 @@
           }//*/
         }
 
-        //console.log('DICT: ', dict);
+        $scope.dict = dict.map(function(e) {
+          
+          var res = [];
+
+          for (var i = 0; i <= tables.length; i += 1) {
+            if (i === 0) {
+              res.push(e[i]);
+            } else {
+              if ( !e[i] ) {
+                res.push([0, 0]);
+              } else {
+                res.push([ ~~e[i][0], ~~e[i][1] ]);
+              }
+            }
+          }
+
+          return res;
+          
+        });
+
+        $scope.labels = labels;
 
         var dim = dict.map(function (e) { return (['authorName', 'assignee'].indexOf(summary.dimension) > -1 ? '@' : '') + e[0]; });
         var dim1 = [];
@@ -840,7 +893,6 @@
         var values1_r1 = tables.map(function () { return []; });
         var values1_r2 = tables.map(function () { return []; });
 
-        var colors = ['rgb(2, 181, 36)', 'rgb(255, 99, 132)', 'rgb(38, 128, 246)'];
         var MAX_CANT = 25, len;
 
         if (dim.length > MAX_CANT) {
@@ -872,7 +924,7 @@
         var label;
 
         for (var i = 0; i < tables.length; i += 1) {
-          if (summary.showGraphics[i] === true) {
+          if (summary.showGraphics[i + 1] === true) {
 
             if ( !!$scope.vsRepo ) {              
               
@@ -880,7 +932,8 @@
                 label: labels[i] + ' (' + $scope.owner1 + '/' + $scope.repo1 + ')',
                 backgroundColor: randomColor({ luminosity: 'dark' }),
                 data: values_r2[i],
-                fill: false
+                fill: false,
+                stack: i.toString()
               });//*/
 
               label = labels[i] + ' (' + $scope.owner + '/' + $scope.repo + ')'; 
@@ -901,7 +954,8 @@
                 }
                 return e;
               }),
-              fill: false
+              fill: false,
+              stack: i.toString()
             });//*/
 
             if ( !!$scope.vsRepo ) {
@@ -909,7 +963,8 @@
                 label: labels[i] + ' (' + $scope.owner1 + '/' + $scope.repo1 + ')',
                 backgroundColor: randomColor({ luminosity: 'dark' }),
                 data: values1_r2[i],
-                fill: false
+                fill: false,
+                stack: i.toString()
               });//*/
             }
 
@@ -925,7 +980,8 @@
                 }
                 return e;
               }),
-              fill: false
+              fill: false,
+              stack: i.toString()
             });//*/
 
           }
@@ -950,14 +1006,27 @@
         $scope.charts.olap1.update();
         $scope.charts.olap2.update();
 
+        $scope.filteredIssues = $scope.issues.filter(function(issue) {
+          if (user.length > 0) {
+            var res = false;
+  
+            for (var i = 0; i < user.length && res === false; i += 1) {
+              res = res || minimatch(issue.user.login, user[i]);
+            }
+  
+            return res;
+          }
+          
+          return true;
+
+        });
+
       };
 
       $scope.getStats = function getStats() {
 
         var url = '/json_' + $scope.owner + '_' + $scope.repo + '/all_stats.json';
-        var url1 = '/json_skycoin_skycoin/all_stats.json';
-
-        $scope.commitsError = false;
+        var url1 = '/json_' + $scope.owner1 + '_' + $scope.repo1 + '/all_stats.json';
 
         $http
           .get(url)
@@ -987,13 +1056,9 @@
           .get(url1)
           .success(function (data) {
 
-            $scope.createCommitCube(data.commits, 'skycoin_skycoin');
-            $scope.createPullCube(data.pullRequests, 'skycoin_skycoin');
-            $scope.createIssueCube(data.issues, 'skycoin_skycoin');
-
-            $scope.setPage('cm', 1);
-            $scope.setPage('is', 1);
-            $scope.setPage('pr', 1);
+            $scope.createCommitCube(data.commits, $scope.owner1 + '_' + $scope.repo1);
+            $scope.createPullCube(data.pullRequests, $scope.owner1 + '_' + $scope.repo1);
+            $scope.createIssueCube(data.issues, $scope.owner1 + '_' + $scope.repo1);
 
           })
           .catch(function (err) {

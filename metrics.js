@@ -10,8 +10,8 @@ var request   = require('request');
 var chalk     = require('chalk');
 var commander = require('commander');
 var qstring   = require('querystring');
-var moment    = require('moment');
 var auth      = require('./auth');
+var mkdirp    = require('mkdirp');
 
 var authHeader = '';
 
@@ -28,6 +28,7 @@ commander
 
 var owner;
 var repo;
+var list;
 var since;
 var MAX_PAGE;
 var filedata;
@@ -39,7 +40,7 @@ if ( commander.hasOwnProperty('file') === true ) {
     var filedata = require('./metricsSettings');
     paramsContainer = filedata;
   } catch(e) {
-    console.log(chalk.red('Error opening the file'));
+    console.log(chalk.red('Error opening the file'), e);
     process.exit(0);
   }
 
@@ -65,186 +66,199 @@ if ( paramsContainer.hasOwnProperty('proxy') === true ) {
 
 owner = paramsContainer.owner;
 repo  = paramsContainer.repo;
+list = paramsContainer.list || [ [ owner, repo] ];
 since = paramsContainer.since || '2018-01-01T00:00:00Z';
 MAX_PAGE = paramsContainer.maxPage || 30;
 
 /// Constants
-var ISSUES_TMPL   = 'http://api.github.com/repos/:owner/:repo/issues?state=all&page=:page&per_page=100&since=' + since;
-var EVENTS_TMPL   = 'http://api.github.com/repos/:owner/:repo/issues/events?state=all&page=:page&per_page=100&since=' + since;
-var PULL_REQ_TMPL = 'http://api.github.com/repos/:owner/:repo/pulls?state=all&page=:page&per_page=100&since=' + since;
-var COMMITS_TMPL  = 'http://api.github.com/repos/:owner/:repo/commits?state=all&page=:page&per_page=100&since=' + since;
-var REVIEWS_TMPL  = 'http://api.github.com/repos/:owner/:repo/pulls/:number/reviews';
-var CONTRIB_TMPL  = 'http://api.github.com/repos/:owner/:repo/stats/contributors';
-var ACTIVITY_TMPL = 'http://api.github.com/repos/:owner/:repo/stats/commit_activity';
-var PARTICIP_TMPL = 'http://api.github.com/repos/:owner/:repo/stats/participation';
-var COMM_PH_TMPL  = 'http://api.github.com/repos/:owner/:repo/stats/punch_card';
+const ISSUES_TMPL   = 'http://api.github.com/repos/:owner/:repo/issues?state=all&page=:page&per_page=100&since=' + since;
+const EVENTS_TMPL   = 'http://api.github.com/repos/:owner/:repo/issues/events?state=all&page=:page&per_page=100&since=' + since;
+const PULL_REQ_TMPL = 'http://api.github.com/repos/:owner/:repo/pulls?state=all&page=:page&per_page=100&since=' + since;
+const COMMITS_TMPL  = 'http://api.github.com/repos/:owner/:repo/commits?state=all&page=:page&per_page=100&since=' + since;
+const REVIEWS_TMPL  = 'http://api.github.com/repos/:owner/:repo/pulls/:number/reviews';
 
-var issues   = ISSUES_TMPL.replace(':owner', owner).replace(':repo', repo);
-var events   = EVENTS_TMPL.replace(':owner', owner).replace(':repo', repo);
-var pullReq  = PULL_REQ_TMPL.replace(':owner', owner).replace(':repo', repo);
-var commits  = COMMITS_TMPL.replace(':owner', owner).replace(':repo', repo);
-var reviews  = REVIEWS_TMPL.replace(':owner', owner).replace(':repo', repo);
-var contrib  = CONTRIB_TMPL.replace(':owner', owner).replace(':repo', repo);
-var activity = ACTIVITY_TMPL.replace(':owner', owner).replace(':repo', repo);
-var particip = PARTICIP_TMPL.replace(':owner', owner).replace(':repo', repo);
-var commph   = COMM_PH_TMPL.replace(':owner', owner).replace(':repo', repo);
+function genMetrics(_owner, _repo) {
+  var issues   = ISSUES_TMPL.replace(':owner', _owner).replace(':repo', _repo);
+  var events   = EVENTS_TMPL.replace(':owner', _owner).replace(':repo', _repo);
+  var pullReq  = PULL_REQ_TMPL.replace(':owner', _owner).replace(':repo', _repo);
+  var commits  = COMMITS_TMPL.replace(':owner', _owner).replace(':repo', _repo);
+  var reviews  = REVIEWS_TMPL.replace(':owner', _owner).replace(':repo', _repo);
 
-function getSingleReview(n) {
+  function getSingleReview(n) {
 
-  n = n.toString();
+    n = n.toString();
 
-  var url = reviews.replace(':number', n);
+    var url = reviews.replace(':number', n);
 
-  if ( fs.exists(path.join(__dirname, 'json', 'review-' + n + '.json')) === true ) {
-    return;
-  }
+    if ( fs.existsSync(path.join(__dirname, 'json_' + _owner + '_' + _repo, 'review-' + n + '.json')) === true ) {
+      return;
+    }
 
-  request
-    .get({
+    request({
+      method: 'GET',
       url: url,
       headers: {
         'Accept': 'application/vnd.github.cloak-preview',
         'User-Agent': 'request'
       }
-    })
-    .on('error', function(err) {
-      console.log(chalk.red(err.message));
-    })
-    .on('response', function(res) {
-      var data = '';
-      res.on('data', function(d) {
-        data += d;
-      });
-      res.on('end', function() {
-        var cant = JSON.parse(data).length;
-        var res = n + ':' + cant + '\n';
-        fs.appendFileSync(path.join(__dirname, 'json', '_prReviews.json'), res);
+    }, function(err, res, body) {
+
+      if ( err ) {
+        console.log(chalk.red(err.message));
+        return;
+      }
+
+      mkdirp.sync(path.join(__dirname, 'json_' + _owner + '_' + _repo));
+
+      var fileName = path.join(__dirname, 'json_' + _owner + '_' + _repo, 'review-' + n + '.json');
+
+      fs.writeFile(fileName, body, function(err1) {
+        if ( err1 ) {
+          console.log(chalk.red('Error trying to save file: ' + fileName));
+          return;
+        }
         console.log(chalk.green('Successfully downloaded reviews for pull #' + n));
       });
-      res.pipe( fs.createWriteStream( path.join(__dirname, 'json', 'review-' + n + '.json') ) );
+
     });
 
-}
-
-function getReviews(data) {
-
-  var obj = JSON.parse(data);
-
-  //console.log(obj);
-
-  var len = obj.length;
-
-  for (var i = 0; i < len; i += 1) {
-
-    //console.log(obj[i].number);
-    getSingleReview(obj[i].number);
-
   }
 
-}
+  function getReviews(data) {
 
-function getInfo(url, descriptor, file, number, callback, accept) {
+    var obj = JSON.parse(data);
 
-  number = number || '';
-  var realNumber = Math.max(1, ~~number);
+    //console.log(obj);
 
-  if ( realNumber > MAX_PAGE ) {
-    return;
-  }
+    var len = obj.length;
 
-  console.log(chalk.blue('Fetching ' + descriptor + '...'));
+    for (var i = 0; i < len; i += 1) {
 
-  accept = accept || 'application/vnd.github.cloak-preview';
+      //console.log(obj[i].number);
+      getSingleReview(obj[i].number);
 
-  var cb;
-
-  url = url.replace(':page', realNumber);
-
-  console.log(chalk.green(url));
-
-  if ( typeof callback === 'function' ) {
-    cb = callback;
-  } else {
-    cb = () => {};
-  }
-
-  if ( url.indexOf('client_id') === -1 ) {
-    if ( url.indexOf('?') === -1 ) {
-      url = url + '?' + authHeader;
-    } else {
-      url = url + '&' + authHeader;
     }
+
   }
 
-  request
-    .get({
+  function getInfo(url, descriptor, file, number, callback, accept) {
+
+    number = number || '';
+    var realNumber = Math.max(1, ~~number);
+
+    if ( realNumber > MAX_PAGE ) {
+      return;
+    }
+
+    console.log(chalk.blue('Fetching ' + descriptor + '...'));
+
+    accept = accept || 'application/vnd.github.cloak-preview';
+
+    var cb;
+
+    url = url.replace(':page', realNumber);
+
+    console.log(chalk.green(url));
+
+    if ( typeof callback === 'function' ) {
+      cb = callback;
+    } else {
+      cb = () => {};
+    }
+
+    if ( url.indexOf('client_id') === -1 ) {
+      if ( url.indexOf('?') === -1 ) {
+        url = url + '?' + authHeader;
+      } else {
+        url = url + '&' + authHeader;
+      }
+    }
+
+    request({
+      method: 'GET',
       url: url,
       headers: {
         'Accept': accept,
         'User-Agent': 'request'
       }
-    })
-    .on('error', function(err) {
-      console.log(chalk.red(descriptor + ' error: ' + err.message));
-    })
-    .on('response', function(res) {
+    }, function(err, res, body) {
 
-      var data = '';
+      if ( err ) {
+        console.log(chalk.red(descriptor + ' error: ' + err.message));
+        return;
+      }
 
-      res.on('data', function(d) {
-        data += d;
+      mkdirp.sync(path.join(__dirname, 'json_' + _owner + '_' + _repo));
+
+      setTimeout(function() {
+        cb(body, url, descriptor, file);
+      }, 0);
+
+      var fileName = path.join(__dirname, 'json_' + _owner + '_' + _repo, file + Date.now() + '.json')      
+
+      fs.writeFile(fileName, body, function(err1) {
+        if ( err1 ) {
+          console.log(chalk.red('Error trying to save file: ' + fileName));
+          return;
+        }
+        console.log(chalk.green('Successfully downloaded ' + descriptor + ' from ' + _owner + '/' + _repo));
       });
 
-      res.on('end', function() {
-        setTimeout(function() {
-
-          cb(data, url, descriptor, file);
-
-        }, 0);
-
-        console.log(chalk.green('Successfully downloaded ' + descriptor + ' from ' + owner + '/' + repo));
-
-      });
-      res.pipe( fs.createWriteStream( path.join(__dirname, 'json', file + Date.now() + '.json') ) );
     });
 
-}
-
-function getNextPage(data, url, descriptor, file) {
-
-  var obj = JSON.parse(data);
-
-  var idx = url.indexOf('?');
-  var query = url.substr(idx + 1, url.length);
-  var base = url.substr(0, idx);
-
-  var queryObj = qstring.decode(query);
-
-  //console.log(queryObj);
-
-  if ( obj.length > 0 ) {
-    if ( !!queryObj.page === true ) {
-      queryObj.page = (~~queryObj.page + 1).toString();
-      getInfo(base + '?' + qstring.encode(queryObj), descriptor, file, queryObj.page, getNextPage);
-    }
-  } else {
-    console.log('EMPTY OBJECT: ', url);
   }
 
+  function getNextPage(data, url, descriptor, file) {
+
+    var obj = JSON.parse(data);
+
+    if ( Array.isArray(obj) === true ) {
+      var idx = url.indexOf('?');
+      var query = url.substr(idx + 1, url.length);
+      var base = url.substr(0, idx);
+
+      var queryObj = qstring.decode(query);
+
+      //console.log(queryObj);
+
+      if ( obj.length > 0 ) {
+        if ( !!queryObj.page === true ) {
+          queryObj.page = (~~queryObj.page + 1).toString();
+          getInfo(base + '?' + qstring.encode(queryObj), descriptor, file, queryObj.page, getNextPage);
+        }
+      } else {
+        console.log('EMPTY OBJECT: ', url);
+      }
+    } else {
+      console.log('EMPTY OBJECT: ', url);
+    }
+
+  }
+
+  getInfo(events, 'Issue Events', 'events', '', getNextPage);
+  getInfo(issues, 'Issues', 'issues', '', getNextPage);
+  getInfo(pullReq, 'Pull Requests', 'pr', '', function(data) {
+    getReviews(data);
+    // console.log(data);
+    getNextPage.apply(null, arguments);
+  });
+  getInfo(commits, 'Commits', 'commits', '', getNextPage);
+
 }
 
-//getInfo(contrib, 'Contributions', 'contribs');
-//getInfo(activity, 'Commit Activity', 'commit_activity');
-//getInfo(particip, 'Participation', 'participation');
-//getInfo(commph, 'Commits per hour', 'punch_card');
-getInfo(events, 'Issue Events', 'events', '', getNextPage);
-getInfo(issues, 'Issues', 'issues', '', getNextPage);
-getInfo(pullReq, 'Pull Requests', 'pr', '', function(data) {
-  getReviews(data);
-  // console.log(data);
-  getNextPage.apply(null, arguments);
-});
-getInfo(commits, 'Commits', 'commits', '', getNextPage);
+var itv = setInterval(function() {
+
+  if ( list.length === 0 ) {
+    clearInterval(itv);
+    return;
+  }
+
+  genMetrics( list[0][0], list[0][1] );
+  
+  list.shift();
+
+}, 5000);
+
 
 /*
 

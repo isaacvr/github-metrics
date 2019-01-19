@@ -1,10 +1,6 @@
-# TODO + data
-  * Add `assignee` and `closer` dimensions and rename `User name` to `Author`
-  * Reimplement the update of the downloaded data
-  * Delete all the functions that are unused
-  * Reduce the file's open/close operations when simplifying/decomposing/bundling data (use RAM instead)
-  * Delete `decompose` operation (no longer needed)
-
+# TODO
+  *
+  
 ## Instructions...
   == Estadísticas de github
     == Reviews
