@@ -47,9 +47,3 @@
   assigned                            +
   closed                              +
   merged                              +
-
-## Last page fetched
-
-  commits 16
-  issues 15
-  pulls 7

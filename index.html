@@ -81,34 +81,8 @@
             </select>
             <pagination pagination="pagination.pr" type="pr" paginator="_tempPr"></pagination>
             <pulls source="filteredPullRequests"></pulls>
-            <!--table ng-hide="pullRequestError">
-              <tr>
-                <th>State</th>
-                <th>#</th>
-                <th>User</th>
-                <th>Title</th>
-                <th>Created to Merged</th>
-                <th>Reviews</th>
-                <th>Reviewers</th>
-                <th>Labels</th>
-              </tr>
-              <tr ng-repeat="pr in filteredPullRequests">
-                <td ng-bind="pr.state" class="{{pr.state}}"></td>
-                <td ng-bind="pr.number"></td>
-                <td ng-bind="'@' + pr.user.login"></td>
-                <td ng-bind="pr.title"></td>
-                <td ng-bind="pr.timeToMerge"></td>
-                <td ng-bind="pr.reviews.length"></td>
-                <td>
-                  <span class="reviewer" ng-repeat="reviewer in pr.requested_reviewers" ng-bind="reviewer.login"></span>
-                </td>
-                <td>
-                  <span class="label" ng-repeat="label in pr.labels" ng-bind="label.name" ng-style="{ 'background-color': '#' + label.color, 'color': inverseColor(label.color) }"></span>
-                </td>
-              </tr>
-            </table-->
           </div>
-          <div class="row" ng-show="issues.length > 0">
+          <div class="row" ng-show="filteredIssues.length > 0">
             <h2 class="card-header" ng-bind="'Issues'"></h2>
             <p class="error" ng-bind="'Error while trying to get issues'" ng-show="issuesError"></p>
             <select ng-model="issueState" ng-change="updateIssueFilter()">
@@ -116,26 +90,6 @@
             </select>
             <pagination pagination="pagination.is" type="is" paginator="_tempIs"></pagination>
             <issues source="filteredIssues"></issues>
-            <!--table ng-hide="issuesError">
-              <tr>
-                <th>State</th>
-                <th>#</th>
-                <th>User</th>
-                <th>Title</th>
-                <th>Created At</th>
-                <th>Closed At</th>
-                <th>Comments</th>
-              </tr>
-              <tr ng-repeat="issue in filteredIssues">
-                <td ng-bind="issue.state" class="{{issue.state}}"></td>
-                <td ng-bind="'#' + issue.number"></td>
-                <td ng-bind="'@' + issue.user.login"></td>
-                <td ng-bind="issue.title"></td>
-                <td ng-bind="issue.created_at"></td>
-                <td ng-bind="issue.closed_at"></td>
-                <td ng-bind="issue.comments"></td>
-              </tr>
-            </table-->
           </div>
         </div>
         <div class="tab" ng-show="selectedTab === 1">

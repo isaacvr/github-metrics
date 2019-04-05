@@ -4,20 +4,20 @@
 
 'use strict';
 
-var fs        = require('fs');
-var path      = require('path');
-var request   = require('request');
-var chalk     = require('chalk');
-var commander = require('commander');
-var qstring   = require('querystring');
-var auth      = require('./auth');
-var mkdirp    = require('mkdirp');
+var fs               = require('fs');
+var path             = require('path');
+var { EventEmitter } = require('events');
+var URL              = require('url').URL;
+var request          = require('request');
+var chalk            = require('chalk');
+var commander        = require('commander');
+var auth             = require('./auth');
+var mkdirp           = require('mkdirp');
 
-var authHeader = '';
-
-if ( auth.client_id !== -1 && auth.client_secret !== -1 ) {
-  authHeader = 'client_id=' + auth.client_id + '&client_secret=' + auth.client_secret;
-}
+var control = new EventEmitter();
+var MAX_QUEUE_SIZE = 5;
+var queue = [];
+var current = 0;
 
 commander
   .option('-o, --owner [owner]', 'Specify the owner of the repository')
@@ -26,8 +26,6 @@ commander
   .option('-f, --file', 'Get the basic data from a file')
   .parse(process.argv);
 
-var owner;
-var repo;
 var list;
 var since;
 var MAX_PAGE;
@@ -64,31 +62,202 @@ if ( paramsContainer.hasOwnProperty('proxy') === true ) {
   });
 }
 
-owner = paramsContainer.owner;
-repo  = paramsContainer.repo;
-list = paramsContainer.list || [ [ owner, repo] ];
+list = paramsContainer.list || [ [ paramsContainer.owner, paramsContainer.repo] ];
 since = paramsContainer.since || '2018-01-01T00:00:00Z';
 MAX_PAGE = paramsContainer.maxPage || 30;
 
-/// Constants
-const ISSUES_TMPL   = 'http://api.github.com/repos/:owner/:repo/issues?state=all&page=:page&per_page=100&since=' + since;
-const EVENTS_TMPL   = 'http://api.github.com/repos/:owner/:repo/issues/events?state=all&page=:page&per_page=100&since=' + since;
-const PULL_REQ_TMPL = 'http://api.github.com/repos/:owner/:repo/pulls?state=all&page=:page&per_page=100&since=' + since;
-const COMMITS_TMPL  = 'http://api.github.com/repos/:owner/:repo/commits?state=all&page=:page&per_page=100&since=' + since;
-const REVIEWS_TMPL  = 'http://api.github.com/repos/:owner/:repo/pulls/:number/reviews';
+var visited = new Map();
+
+function setParams(url, params) {
+
+  var localUrl;
+
+  if ( !(url instanceof URL) ) {
+    localUrl = new URL(url);
+  } else {
+    localUrl = new URL(url.toString());
+  }
+
+  for (var i = 0; i < params.length; i += 1) {
+    localUrl.searchParams.set(params[i][0], params[i][1]);
+  }
+  
+  return localUrl.toString();
+
+}
+
+function getUrlFor(type, options) {
+
+  const TEMPLATES = {
+    branches: 'http://api.github.com/repos/:owner/:repo/branches',
+    issues: 'http://api.github.com/repos/:owner/:repo/issues',
+    events: 'http://api.github.com/repos/:owner/:repo/issues/events',
+    pulls: 'http://api.github.com/repos/:owner/:repo/pulls',
+    commits: 'http://api.github.com/repos/:owner/:repo/commits',
+    reviews: 'http://api.github.com/repos/:owner/:repo/pulls/:number/reviews'
+  };
+
+  if ( TEMPLATES.hasOwnProperty(type) === false ) {
+    return null;
+  }
+
+  options.params = options.params || [];
+
+  console.log('GET URL:  ', type, options);
+
+  var urlObj = TEMPLATES[type]
+                .replace(':owner', options.owner)
+                .replace(':repo', options.repo);
+   
+  if (type === 'reviews') {
+    urlObj = urlObj.replace(':number', options.number);
+  }
+
+  urlObj = new URL(urlObj);
+
+  if ( [ 'branches', 'reviews' ].indexOf(type) === -1 ) {
+    urlObj.searchParams.set('state', 'all');
+    urlObj.searchParams.set('per_page', '100');
+    urlObj.searchParams.set('since', since);
+  }
+
+  if ( auth.client_id !== -1 && auth.client_secret !== -1 ) {
+    urlObj.searchParams.set('client_id', auth.client_id);
+    urlObj.searchParams.set('client_secret', auth.client_secret);
+  }
+
+  return setParams(urlObj, options.params);
+
+};
+
+function getRandomId() {
+  return Math.random().toString().split('.')[1];
+}
+
+async function getInfo(owner, repo, url, descriptor, file, number, callback, id /*, accept */) {
+
+  number = number || '';
+  var realNumber = Math.max(1, ~~number);
+
+  if ( realNumber > MAX_PAGE ) {
+    control.emit('taskEnd', id);
+    return;
+  }
+
+  var args = arguments;
+
+  console.log(chalk.blue('Fetching ' + descriptor + '...'));
+
+  //accept = accept || 'application/vnd.github.cloak-preview';
+  var accept = 'application/vnd.github.cloak-preview';
+
+  var cb;
+
+  url = setParams(url, [ ['page', realNumber] ]);
+
+  console.log(chalk.green(url));
+
+  if ( typeof callback === 'function' ) {
+    cb = callback;
+  } else {
+    cb = () => {};
+  }
+
+  // if ( url.indexOf('client_id') === -1 ) {
+  //   if ( url.indexOf('?') === -1 ) {
+  //     url = url + '?' + authHeader;
+  //   } else {
+  //     url = url + '&' + authHeader;
+  //   }
+  // }
+
+  if ( visited.has(url) === true ) {
+    control.emit('taskEnd', id);
+    return;
+  }
+
+  visited.set(url, true);
+
+  request({
+    method: 'GET',
+    url: url,
+    headers: {
+      'Accept': accept,
+      'User-Agent': 'request'
+    }
+  }, function(err, res, body) {
+
+    if ( err ) {
+      visited.delete(url);
+      console.log(chalk.red(descriptor + ' error: ' + err.message + '  --  ' + url));
+      //control.emit('addTask', getRandomId(), Object.keys(args).map(function(_e) { return args[_e] }) );
+      control.emit('taskEnd', id);
+      return;
+    }
+
+    control.emit('taskEnd', id);
+
+    setTimeout(function() {
+      cb(owner, repo, body, url, descriptor, file);
+    }, 0);
+    
+    if ( file != null ) {
+      mkdirp.sync(path.join(__dirname, 'json_' + owner + '_' + repo));
+
+      var fileName = path.join(__dirname, 'json_' + owner + '_' + repo, file + Date.now() + '.json');
+
+      fs.writeFile(fileName, body, function(err1) {
+        if ( err1 ) {
+          console.log(chalk.red('Error trying to save file: ' + fileName));
+          return;
+        }
+        console.log(chalk.green('Successfully downloaded ' + descriptor + ' from ' + owner + '/' + repo));
+      });
+    }
+
+  });
+
+}
+
+var getNextPage = function getNextPage(owner, repo, data, url, descriptor, file) {
+
+  try {
+    var obj = JSON.parse(data);
+
+    if ( Array.isArray(obj) === true ) {
+      var urlObj = new URL(url);
+
+      //console.log(queryObj);
+
+      if ( obj.length > 0 ) {
+        if ( urlObj.searchParams.has('page') === true ) {
+          var newPage = ~~urlObj.searchParams.get('page') + 1;
+          control.emit('addTask', getRandomId(), [ owner, repo, setParams(urlObj, [['page', newPage]]), descriptor, file, newPage, getNextPage ]);
+        }
+      } else {
+        console.log('EMPTY OBJECT: ', url);
+      }
+    } else {
+      console.log('EMPTY OBJECT: ', url);
+    }
+
+  } catch(e) {
+    console.log('ERROR in file: ', url);
+  }
+
+}
 
 function genMetrics(_owner, _repo) {
-  var issues   = ISSUES_TMPL.replace(':owner', _owner).replace(':repo', _repo);
-  var events   = EVENTS_TMPL.replace(':owner', _owner).replace(':repo', _repo);
-  var pullReq  = PULL_REQ_TMPL.replace(':owner', _owner).replace(':repo', _repo);
-  var commits  = COMMITS_TMPL.replace(':owner', _owner).replace(':repo', _repo);
-  var reviews  = REVIEWS_TMPL.replace(':owner', _owner).replace(':repo', _repo);
 
-  function getSingleReview(n) {
+  var getSingleReview = function getSingleReview(n) {
 
     n = n.toString();
 
-    var url = reviews.replace(':number', n);
+    var url = getUrlFor('reviews', {
+      owner: _owner,
+      repo: _repo,
+      number: n
+    });
 
     if ( fs.existsSync(path.join(__dirname, 'json_' + _owner + '_' + _repo, 'review-' + n + '.json')) === true ) {
       return;
@@ -124,129 +293,120 @@ function genMetrics(_owner, _repo) {
 
   }
 
-  function getReviews(data) {
+  var getReviews = function getReviews(data) {
 
-    var obj = JSON.parse(data);
+    try {
+      var obj = JSON.parse(data);
 
-    //console.log(obj);
+      //console.log(obj);
 
-    var len = obj.length;
+      var len = obj.length;
 
-    for (var i = 0; i < len; i += 1) {
+      for (var i = 0; i < len; i += 1) {
 
-      //console.log(obj[i].number);
-      getSingleReview(obj[i].number);
+        //console.log(obj[i].number);
+        getSingleReview(obj[i].number);
 
+      }
+
+    } catch(e) {
+      console.log('ERROR: ', e.message);
     }
 
   }
 
-  function getInfo(url, descriptor, file, number, callback, accept) {
-
-    number = number || '';
-    var realNumber = Math.max(1, ~~number);
-
-    if ( realNumber > MAX_PAGE ) {
-      return;
-    }
-
-    console.log(chalk.blue('Fetching ' + descriptor + '...'));
-
-    accept = accept || 'application/vnd.github.cloak-preview';
-
-    var cb;
-
-    url = url.replace(':page', realNumber);
-
-    console.log(chalk.green(url));
-
-    if ( typeof callback === 'function' ) {
-      cb = callback;
-    } else {
-      cb = () => {};
-    }
-
-    if ( url.indexOf('client_id') === -1 ) {
-      if ( url.indexOf('?') === -1 ) {
-        url = url + '?' + authHeader;
-      } else {
-        url = url + '&' + authHeader;
-      }
-    }
-
-    request({
-      method: 'GET',
-      url: url,
-      headers: {
-        'Accept': accept,
-        'User-Agent': 'request'
-      }
-    }, function(err, res, body) {
-
-      if ( err ) {
-        console.log(chalk.red(descriptor + ' error: ' + err.message));
-        return;
-      }
-
-      mkdirp.sync(path.join(__dirname, 'json_' + _owner + '_' + _repo));
-
-      setTimeout(function() {
-        cb(body, url, descriptor, file);
-      }, 0);
-
-      var fileName = path.join(__dirname, 'json_' + _owner + '_' + _repo, file + Date.now() + '.json')      
-
-      fs.writeFile(fileName, body, function(err1) {
-        if ( err1 ) {
-          console.log(chalk.red('Error trying to save file: ' + fileName));
-          return;
-        }
-        console.log(chalk.green('Successfully downloaded ' + descriptor + ' from ' + _owner + '/' + _repo));
-      });
-
-    });
-
-  }
-
-  function getNextPage(data, url, descriptor, file) {
-
-    var obj = JSON.parse(data);
-
-    if ( Array.isArray(obj) === true ) {
-      var idx = url.indexOf('?');
-      var query = url.substr(idx + 1, url.length);
-      var base = url.substr(0, idx);
-
-      var queryObj = qstring.decode(query);
-
-      //console.log(queryObj);
-
-      if ( obj.length > 0 ) {
-        if ( !!queryObj.page === true ) {
-          queryObj.page = (~~queryObj.page + 1).toString();
-          getInfo(base + '?' + qstring.encode(queryObj), descriptor, file, queryObj.page, getNextPage);
-        }
-      } else {
-        console.log('EMPTY OBJECT: ', url);
-      }
-    } else {
-      console.log('EMPTY OBJECT: ', url);
-    }
-
-  }
-
-  getInfo(events, 'Issue Events', 'events', '', getNextPage);
-  getInfo(issues, 'Issues', 'issues', '', getNextPage);
-  getInfo(pullReq, 'Pull Requests', 'pr', '', function(data) {
-    getReviews(data);
-    // console.log(data);
-    getNextPage.apply(null, arguments);
+  var branches = getUrlFor('branches', {
+    owner: _owner,
+    repo: _repo
   });
-  getInfo(commits, 'Commits', 'commits', '', getNextPage);
+
+  control.emit('addTask', getRandomId(), [ _owner, _repo, branches, 'Branches', null, '', function(owner, repo, branchList) {
+    branchList = JSON.parse(branchList);
+
+    var repoInfo = {
+      owner: owner,
+      repo: repo
+    };
+
+    console.log(owner, '/', repo, branchList);
+
+    var events = getUrlFor('events', repoInfo);
+    var issues = getUrlFor('issues', repoInfo);
+    var pullReq = getUrlFor('pulls', repoInfo);
+    var commits = getUrlFor('commits', repoInfo);
+
+    control.emit('addTask', getRandomId(), [ owner, repo, events, 'Issue Events', 'events', '', getNextPage ]);
+    control.emit('addTask', getRandomId(), [ owner, repo, issues, 'Issues', 'issues', '', getNextPage ]);
+    control.emit('addTask', getRandomId(), [ owner, repo, pullReq, 'Pull Requests', 'pr', '', function(owner, repo, data) {
+      var args = arguments;
+      getReviews(data);
+      getNextPage.apply(null, Object.keys(args).map(e => args[e]) );
+    } ]);
+
+    for (var i = 0; i < branchList.length; i += 1) {
+      commits = setParams(commits, [['sha', branchList[i].commit.sha]]);
+      console.log('\n\n', branchList[i].name, '    ', branchList[i].commit.sha, '\n');
+      control.emit('addTask', getRandomId(), [ owner, repo, commits, 'Commits', 'commits', '', getNextPage ]);
+    }//*/
+  } ]);
 
 }
 
-var itv = setInterval(function() {
+control.on('addTask', function(id, params) {
+  
+  console.log('ADD TASK ', id);
+
+  queue.push({
+    params: params,
+    id: id
+  });
+
+  if ( current <= MAX_QUEUE_SIZE ) {
+    current += 1;
+    console.log('Current ', current);
+    setTimeout(function() {
+      getInfo.apply(null, params.concat(id));
+    }, 10);
+  }
+});
+
+control.on('taskEnd', function(taskId) {
+
+  console.log('END TASK ', taskId);
+
+  current -= 1;
+
+  if ( current < 0 ) {
+    current = 0;
+  }
+
+  var i;
+
+  for (i = queue.length - 1; i >= 0; i -= 1) {
+    if ( queue[i].id === taskId ) {
+      queue.splice(i, 1);
+      break;
+    }
+  }
+
+  console.log('Current ', current, 'of', queue.length);
+
+  if ( current === 0 ) {
+    for (i = 0; i < MAX_QUEUE_SIZE && i < queue.length; i += 1) {
+      console.log('TASK  ===>>   ', queue[i].params);
+      if ( queue[i] ) {
+        getInfo.apply(null, queue[i].params.concat(queue[i].id));
+      }
+    }
+  }
+
+});
+
+for (var i = 0; i < list.length; i += 1) {
+  genMetrics(list[i][0], list[i][1]);
+}//*/
+
+/*var itv = setInterval(function() {
 
   if ( list.length === 0 ) {
     clearInterval(itv);
@@ -257,46 +417,4 @@ var itv = setInterval(function() {
   
   list.shift();
 
-}, 5000);
-
-
-/*
-
-  -------------------------------------------------------------------------
-                              ** Issues **
-  {
-    state: String,
-    title: String,
-    created_at: Date || null,
-    closed_at: Date || null,
-    comments: Number
-  }
-
-  -------------------------------------------------------------------------
-                              ** Pull Request **
-
-  {
-    state: String,
-    title: String,
-    created_at: Date || null,
-    closed_at: Date || null,
-    merged_at: Date || null
-  }
-
-  -------------------------------------------------------------------------
-                              ** Commits **
-
-  {
-    commit: {
-      author: {
-
-      }
-    }
-  }
-
-  https://help.github.com/articles/searching-commits/
-  https://help.github.com/articles/search-syntax/
-
-
-
-//*/
+}, 10);//*/

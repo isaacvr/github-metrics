@@ -9,14 +9,6 @@ var fs = require('fs');
 
 var TIMEOUT = 50;
 
-function getFileName(dir) {
-
-  var name = dir.split('/').pop();
-
-  return name;
-
-}
-
 function __simpl(obj, fields) {
 
   var temp = {};

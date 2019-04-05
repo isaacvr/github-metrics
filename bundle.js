@@ -77,6 +77,9 @@ var handlers = {
         ma = moment();
         mb = moment();
       }
+      if ( ma.diff(mb) == 0 ) {
+        return a.sha < b.sha;
+      }
       return ma.diff(mb) >= 0;
     });
 
@@ -118,7 +121,7 @@ var handlers = {
     return res;
 
   },
-  pulls: function (arr) {
+  pr: function (arr) {
     
     if ( arr.length === 0 ) {
       return [];
@@ -199,9 +202,12 @@ function bundle(dir, file) {
         return;
       }
 
-      var obj = require(data[i++]);
-
-      res = res.concat(obj);
+      try {
+        var obj = require(data[i++]);
+        res = res.concat(obj);
+      } catch(err) {
+        console.log('ERROR: ', err.message);
+      }
 
     }, TIMEOUT);
   });

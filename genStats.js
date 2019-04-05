@@ -18,6 +18,7 @@ var generate = function generate(BASE_DIR) {
   var issues = [];
   var users = [];
   var references = {};
+  var events = {};
 
   var stats = {
     pr: {
@@ -152,7 +153,6 @@ var generate = function generate(BASE_DIR) {
 
     var len = users.length;
     var id, i;
-    var mnt = commit.created_at_moment.format('MMMM');
 
     if (authorInfo != null && authorInfo.id && authorInfo.login) {
       id = authorInfo.id;
@@ -412,8 +412,20 @@ var generate = function generate(BASE_DIR) {
       return;
     } else {
       if (prop != 'closed_by') {
+        
         issue[prop] = moment(event.created_at);
+        
+        if ( prop === 'commited_at_moment' ) {
+          if ( !issue.committers ) {
+            issue.committers = [];
+          }
+          if ( issue.committers.indexOf(event.actor.login) === -1 ) {
+            issue.committers.push(event.actor.login);
+          }
+        }
+
         updateIssueSteps(issue);
+        
       } else {
         if (issue.hasOwnProperty(prop) === false) {
           issue[prop] = event.actor.login;
@@ -563,12 +575,12 @@ var generate = function generate(BASE_DIR) {
 
     try {
 
-      var events = require(file);
+      events = require(file);
 
       addEvents(events);
 
     } catch (e) {
-      console.log('Events ERROR: ', e);
+      console.log('Events ERROR: ', file, '\n', e);
     }
 
   }
@@ -631,7 +643,8 @@ var generate = function generate(BASE_DIR) {
       issues: issues,
       users: users,
       references: references,
-      stats: stats
+      stats: stats,
+      events: events
     };
 
     var file = path.join(BASE_DIR, '/all_stats.json');

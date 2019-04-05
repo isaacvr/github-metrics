@@ -24,10 +24,12 @@
       $scope.IS_STATES = ['all', 'open', 'closed'];
       $scope.selectedMonth = moment('2000-01-00T00:00:00Z').format('MMMM');
       $scope.owner = 'simelo';
-      $scope.repo = 'libskycoin-dotnet';
+      $scope.repo = 'skycoin-hardware-wallet-go';
 
       $scope.owner1 = 'skycoin';
-      $scope.repo1 = $scope.repo;
+      $scope.repo1 = 'hardware-wallet-go'; //$scope.repo;
+      
+      $scope.vsRepo = false;
 
       $scope.selectedTab = 0;
       $scope.totalTabs = 2;
@@ -35,8 +37,8 @@
       $scope.summary = {
         olap1: false,
         olap2: false,
-        initialDay: '1/12/2018',
-        finalDay: '31/12/2018',
+        initialDay: '1/2/2019',
+        finalDay: '28/2/2019',
         userFilter: 'olemis, stdev*',
         filterByName: true,
         filterByRange: true,
@@ -537,7 +539,8 @@
             authorName: issues[i].user.login,
             authorId: issues[i].user.id,
             date: issues[i].created_at_first,
-            labels: issues[i].labels
+            labels: issues[i].labels,
+            number: issues[i].number
           };
           
           mdata = moment(obj.date);
@@ -554,12 +557,12 @@
               mdata.format('HH'),
               mdata.format('mm'),
               obj.date,
-              '',
-              issues[i].closed_by || ''
+              ''
             ]);
 
             data.push([
-              obj.labels
+              obj.labels,
+              obj.number
             ]);
           }
 
@@ -574,23 +577,66 @@
               mdata.format('HH'),
               mdata.format('mm'),
               obj.date,
-              issues[i].assignees[j].login,
-              issues[i].closed_by || ''
+              issues[i].assignees[j].login
             ]);
 
             data.push([
-              obj.labels
+              obj.labels,
+              obj.number
             ]);
           }
         }
 
         $scope['issuesTable' + code] = new Table({
-          dimensions: ['authorName', 'state', 'day', 'month', 'year', 'hour', 'minute', 'date', 'assignee', 'closer'],
+          dimensions: ['authorName', 'state', 'day', 'month', 'year', 'hour', 'minute', 'date', 'assignee'],
           points: points,
-          fields: ['labels'],
+          fields: ['labels', 'number'],
           data: data
         });
 
+      };
+
+      $scope.createEventCube = function createEventCube(events, code) {
+        
+        var i, len = events.length;
+        var points = [];
+        var mdata;
+
+        for (i = 0; i < len; i += 1) {
+
+          if (events[i].actor === null) {
+            events[i].actor = { login: '' };
+          }
+
+          var obj = {
+            state: events[i].event,
+            authorName: events[i].actor.login,
+            date: events[i].created_at,
+            issueNumber: events[i].issue.number
+          };
+          
+          mdata = moment(obj.date);
+          mdata.utcOffset(0);
+
+          points.push([
+            obj.authorName,
+            obj.state,
+            mdata.format('dddd'),
+            mdata.format('MMMM'),
+            mdata.format('YYYY'),
+            mdata.format('HH'),
+            mdata.format('mm'),
+            obj.date,
+            obj.issueNumber
+          ]);
+        }
+
+        $scope['eventsTable' + code] = new Table({
+          dimensions: ['authorName', 'state', 'day', 'month', 'year', 'hour', 'minute', 'date', 'issue'],
+          points: points,
+          fields: ['other'],
+          data: points.map(() => { return [0]; })
+        });
       };
 
       // Returns true if a <= c && c <= b
@@ -657,15 +703,7 @@
           function filterByName(item) {
             var name = item[0];
 
-            if (summary.dimension === 'closer') {
-              if (item.length < 10) {
-                return false;
-              }
-              name = item[9];
-            }
-            
             if (summary.filterByName === true) {
-              //console.log('Filtered by Name');
               if ( item.length > 8 ) {
                 if ( name == '' ) {
                   return false;
@@ -685,7 +723,6 @@
           },
           function filterByRange(item) {
             if (summary.filterByRange === true) {
-              //console.log('Filtered by Range');
               var a = moment(summary.initialDay, $scope.DATE_FORMAT);
               var b = moment(summary.finalDay, $scope.DATE_FORMAT);
               var c = moment(item[7]);
@@ -697,15 +734,15 @@
             return true;
           },
           function filterByState(item) {
-            if (summary.filterByState === true) {
-              //console.log('Filtered by State');
+            if ( summary.dimension === 'closer' ) {
+              return item[1] === 'closed';
+            } else if (summary.filterByState === true) {
               return summary.state === item[1];
             }
             return true;
           },
           function filterByAssignees(item) {
             if (summary.filterByAssignee === true) {
-              //console.log('Filtered by Assignee');
               if (item.length >= 9) {
                 return item[8].split(',').indexOf(summary.assignee) > -1;
               }
@@ -734,6 +771,7 @@
         var rows, labels = ['Commits', 'Pulls', 'Issues'];
         var dict = [];
         var fnd;
+        var issuesList = [], eventTable, _temp;
 
         for (var i = 0; i < tables.length; i += 1) {
 
@@ -741,17 +779,24 @@
             continue;
           }
 
-          if (tables[i].dimensions.indexOf(summary.dimension) === -1) {
-            continue;
+          if ( i + 1 === tables.length && summary.dimension === 'closer' ) {
+            _temp = $scope['eventsTable' + ((!!$scope.vsRepo) ? code2 : code1) ];
+          } else {
+            _temp = tables[i];
+            if (_temp.dimensions.indexOf(summary.dimension) === -1) {
+              continue;
+            }
           }
 
-          rows = tables[i]
+          rows = _temp
             .dice(__filter)
-            .rollup(summary.dimension, ['year'], customAdder, [0])
+            .rollup((summary.dimension === 'closer') ? 'authorName' : summary.dimension, ['year'], customAdder, [0])
             .rows
             .filter(function (e) {
               return e[0] != '';
             });
+          
+          console.log('Rows: ', i, rows);
 
           if (summary.dimension === 'day') {
             $scope.mergeSort(rows, function (a, b) {
@@ -841,7 +886,31 @@
             }
 
           }//*/
+          eventTable = $scope['eventsTable' + code2];
+          issuesList = issuesList.concat( tables1[2].dice(__filter).rows.map((e) => [e[10], 0]) );
+          //console.log('Lalala 1:  ', );
+        } else {
+          eventTable = $scope['eventsTable' + code1];    
+          issuesList = issuesList.concat( tables[2].dice(__filter).rows.map((e) => [e[10], 0]) );
+          //console.log('Lalala 2:  ', tables[2].dice(__filter).rows);
+
         }
+
+        issuesList = issuesList.concat(eventTable
+                      .dice(function(item) {
+                        var i, res = true;
+                        if ( ["referenced", "reopened", "assigned", "closed", "merged"].indexOf(item[1]) === -1 ) {
+                          return false;
+                        }
+                        for(i = 0; i < 2 && res === true; i += 1) {
+                          res = res && filters[i](item);
+                        }
+                        return res;
+                      })
+                      .rollup('issue', ['year'], (sum) => [sum[0] + 1], [0])
+                      .rows);//*/
+
+        console.log('Issues List', issuesList);
 
         $scope.dict = dict.map(function(e) {
           
@@ -865,7 +934,7 @@
 
         $scope.labels = labels;
 
-        var dim = dict.map(function (e) { return (['authorName', 'assignee'].indexOf(summary.dimension) > -1 ? '@' : '') + e[0]; });
+        var dim = dict.map(function (e) { return (['authorName', 'assignee', 'closer'].indexOf(summary.dimension) > -1 ? '@' : '') + e[0]; });
         var dim1 = [];
 
         var values_r1 = tables.map(function (e, idx) {
@@ -946,9 +1015,9 @@
               label: label,
               backgroundColor: randomColor({ luminosity: 'dark' }),
               data: values_r1[i].map(function(e, idx) {
-                if ( i > 0 && !!$scope.vsRepo) {
+                if ( i > 0 && !!$scope.vsRepo && summary.dimension !== 'closer') {
                   return 0;
-                }
+                }//*/
                 if ( !!$scope.vsRepo ) {
                   return e - values_r2[i][idx];
                 }
@@ -1006,19 +1075,16 @@
         $scope.charts.olap1.update();
         $scope.charts.olap2.update();
 
-        $scope.filteredIssues = $scope.issues.filter(function(issue) {
-          if (user.length > 0) {
-            var res = false;
-  
-            for (var i = 0; i < user.length && res === false; i += 1) {
-              res = res || minimatch(issue.user.login, user[i]);
-            }
-  
-            return res;
-          }
-          
-          return true;
+        var _issues = ( !!$scope.vsRepo ) ? $scope.parentIssues : $scope.issues;
+        var _validIssues = issuesList.map((e) => e[0]); 
 
+        console.log('Valid Issues: ', _validIssues);
+
+        $scope.filteredIssues = _issues.filter(function(issue) {
+          if ( _validIssues.indexOf(issue.number) > -1 ) {
+            console.log(issue);
+          }
+          return _validIssues.indexOf(issue.number) > -1;
         });
 
       };
@@ -1043,6 +1109,7 @@
             $scope.createCommitCube($scope.commits, $scope.owner + '_' + $scope.repo);
             $scope.createPullCube($scope.pullRequests, $scope.owner + '_' + $scope.repo);
             $scope.createIssueCube($scope.issues, $scope.owner + '_' + $scope.repo);
+            $scope.createEventCube(data.events, $scope.owner + '_' + $scope.repo);
 
             $scope.setPage('cm', 1);
             $scope.setPage('is', 1);
@@ -1056,9 +1123,12 @@
           .get(url1)
           .success(function (data) {
 
+            $scope.parentIssues = data.issues;
+
             $scope.createCommitCube(data.commits, $scope.owner1 + '_' + $scope.repo1);
             $scope.createPullCube(data.pullRequests, $scope.owner1 + '_' + $scope.repo1);
             $scope.createIssueCube(data.issues, $scope.owner1 + '_' + $scope.repo1);
+            $scope.createEventCube(data.events, $scope.owner1 + '_' + $scope.repo1);
 
           })
           .catch(function (err) {
