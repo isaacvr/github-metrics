@@ -81,7 +81,7 @@ function setParams(url, params) {
   for (var i = 0; i < params.length; i += 1) {
     localUrl.searchParams.set(params[i][0], params[i][1]);
   }
-  
+
   return localUrl.toString();
 
 }
@@ -108,7 +108,7 @@ function getUrlFor(type, options) {
   var urlObj = TEMPLATES[type]
                 .replace(':owner', options.owner)
                 .replace(':repo', options.repo);
-   
+
   if (type === 'reviews') {
     urlObj = urlObj.replace(':number', options.number);
   }
@@ -200,7 +200,7 @@ async function getInfo(owner, repo, url, descriptor, file, number, callback, id 
     setTimeout(function() {
       cb(owner, repo, body, url, descriptor, file);
     }, 0);
-    
+
     if ( file != null ) {
       mkdirp.sync(path.join(__dirname, 'json_' + owner + '_' + repo));
 
@@ -339,7 +339,7 @@ function genMetrics(_owner, _repo) {
     control.emit('addTask', getRandomId(), [ owner, repo, issues, 'Issues', 'issues', '', getNextPage ]);
     control.emit('addTask', getRandomId(), [ owner, repo, pullReq, 'Pull Requests', 'pr', '', function(owner, repo, data) {
       var args = arguments;
-      getReviews(data);
+      //getReviews(data);
       getNextPage.apply(null, Object.keys(args).map(e => args[e]) );
     } ]);
 
@@ -353,7 +353,7 @@ function genMetrics(_owner, _repo) {
 }
 
 control.on('addTask', function(id, params) {
-  
+
   console.log('ADD TASK ', id);
 
   queue.push({
@@ -414,7 +414,7 @@ for (var i = 0; i < list.length; i += 1) {
   }
 
   genMetrics( list[0][0], list[0][1] );
-  
+
   list.shift();
 
 }, 10);//*/
